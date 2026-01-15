@@ -11,6 +11,7 @@ import jenisTeh from "./data/jenisTeh";
 import "./App.css";
 
 function App() {
+  const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState('portal');
   const [currentShift, setCurrentShift] = useState(null);
   const [shifts, setShifts] = useState([]);
@@ -18,7 +19,6 @@ function App() {
 
   // Global persistent menu data that carries over between shifts
   const [globalMenuData, setGlobalMenuData] = useState(() => {
-    // Initialize from jenisTeh template
     return jenisTeh.map(item => ({
       id: item.id,
       namaItem: item.nama,
@@ -28,69 +28,79 @@ function App() {
     }));
   });
 
-  // PERBAIKAN: Load data from storage on mount
+  // ✅ PERBAIKAN: Load data from localStorage (browser storage)
   useEffect(() => {
-    const loadData = async () => {
+    const loadData = () => {
       try {
+        console.log('Loading data from localStorage...');
+        
         // Load view
-        const viewData = await window.storage.get('current-view');
-        if (viewData?.value) {
-          setView(viewData.value);
+        const savedView = localStorage.getItem('tea-shop-view');
+        if (savedView) {
+          console.log('Loaded view:', savedView);
+          setView(savedView);
         }
 
         // Load current shift
-        const shiftData = await window.storage.get('current-shift');
-        if (shiftData?.value) {
-          setCurrentShift(JSON.parse(shiftData.value));
+        const savedShift = localStorage.getItem('tea-shop-current-shift');
+        if (savedShift) {
+          console.log('Loaded current shift');
+          setCurrentShift(JSON.parse(savedShift));
         }
 
         // Load shifts history
-        const shiftsData = await window.storage.get('shifts-history');
-        if (shiftsData?.value) {
-          setShifts(JSON.parse(shiftsData.value));
+        const savedShifts = localStorage.getItem('tea-shop-shifts-history');
+        if (savedShifts) {
+          console.log('Loaded shifts history');
+          setShifts(JSON.parse(savedShifts));
         }
 
         // Load global menu data
-        const menuData = await window.storage.get('global-menu');
-        if (menuData?.value) {
-          setGlobalMenuData(JSON.parse(menuData.value));
+        const savedMenu = localStorage.getItem('tea-shop-global-menu');
+        if (savedMenu) {
+          console.log('Loaded global menu');
+          setGlobalMenuData(JSON.parse(savedMenu));
         }
 
         // Load selected shift
-        const selectedData = await window.storage.get('selected-shift');
-        if (selectedData?.value) {
-          setSelectedShift(JSON.parse(selectedData.value));
+        const savedSelected = localStorage.getItem('tea-shop-selected-shift');
+        if (savedSelected) {
+          console.log('Loaded selected shift');
+          setSelectedShift(JSON.parse(savedSelected));
         }
+        
+        console.log('Data loaded successfully!');
       } catch (error) {
-        console.log('No saved data found, starting fresh');
+        console.error('Error loading data:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     loadData();
   }, []);
 
-  // PERBAIKAN: Save data to storage whenever it changes
+  // ✅ PERBAIKAN: Save data to localStorage whenever it changes
   useEffect(() => {
-    const saveData = async () => {
-      try {
-        await window.storage.set('current-view', view);
-        await window.storage.set('current-shift', JSON.stringify(currentShift));
-        await window.storage.set('shifts-history', JSON.stringify(shifts));
-        await window.storage.set('global-menu', JSON.stringify(globalMenuData));
-        await window.storage.set('selected-shift', JSON.stringify(selectedShift));
-      } catch (error) {
-        console.error('Failed to save data:', error);
-      }
-    };
-
-    saveData();
-  }, [view, currentShift, shifts, globalMenuData, selectedShift]);
+    if (isLoading) return;
+    
+    try {
+      console.log('Saving data... View:', view);
+      localStorage.setItem('tea-shop-view', view);
+      localStorage.setItem('tea-shop-current-shift', JSON.stringify(currentShift));
+      localStorage.setItem('tea-shop-shifts-history', JSON.stringify(shifts));
+      localStorage.setItem('tea-shop-global-menu', JSON.stringify(globalMenuData));
+      localStorage.setItem('tea-shop-selected-shift', JSON.stringify(selectedShift));
+      console.log('Data saved!');
+    } catch (error) {
+      console.error('Failed to save data:', error);
+    }
+  }, [view, currentShift, shifts, globalMenuData, selectedShift, isLoading]);
 
   const handleStartShift = (shiftData) => {
-    // Start new shift with current global menu data
     const newShift = {
       ...shiftData,
-      stokJenisTeh: [...globalMenuData] // Copy current menu data to new shift
+      stokJenisTeh: [...globalMenuData]
     };
     setCurrentShift(newShift);
     setView('kasir');
@@ -99,7 +109,6 @@ function App() {
   const handleUpdateShift = (updatedShift) => {
     setCurrentShift(updatedShift);
     
-    // Update global menu data if stokJenisTeh changed
     if (updatedShift.stokJenisTeh) {
       setGlobalMenuData(updatedShift.stokJenisTeh);
     }
@@ -115,14 +124,13 @@ function App() {
     
     setShifts(prev => [...prev, completedShift]);
     
-    // Preserve menu data for next shift but reset stokAwal to current remaining stock
     const updatedMenuForNextShift = currentShift.stokJenisTeh.map(item => {
       const soldCount = getSoldCountForItem(item.namaItem, currentShift.transaksi);
       const remainingStock = Math.max(0, (item.stokAwal || 0) - soldCount);
       
       return {
         ...item,
-        stokAwal: remainingStock // Next shift starts with remaining stock
+        stokAwal: remainingStock
       };
     });
     
@@ -182,6 +190,26 @@ function App() {
   const handleBackToKasir = () => {
     setView('kasir');
   };
+
+  // Show loading screen while data is being loaded
+  if (isLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#FFF8E7'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 60, marginBottom: 20 }}>☕</div>
+          <div style={{ color: '#C85A00', fontSize: 20, fontWeight: 'bold' }}>
+            Memuat data...
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Portal View
   if (view === 'portal') {
