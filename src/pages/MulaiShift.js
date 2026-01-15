@@ -8,7 +8,8 @@ function MulaiShift({ onBack, onStart }) {
     sisaCup: 0,
     cupBesar: 0,
     gula: 0,
-    teh: 0
+    teh: 0,
+    esBatu: 0  // ✅ TAMBAHAN
   });
 
   const handleChange = (key, value) => {
@@ -29,7 +30,8 @@ function MulaiShift({ onBack, onStart }) {
         sisaCup: Number(stok.sisaCup) || 0,
         cupBesar: Number(stok.cupBesar) || 0,
         gula: Number(stok.gula) || 0,
-        teh: Number(stok.teh) || 0
+        teh: Number(stok.teh) || 0,
+        esBatu: Number(stok.esBatu) || 0  // ✅ TAMBAHAN
       },
       pembuatanTeh: [],
       stokJenisTeh: []
@@ -116,6 +118,23 @@ function MulaiShift({ onBack, onStart }) {
                 value={stok.teh}
                 onChange={(e) => handleChange('teh', e.target.value)}
               />
+            </div>
+          </div>
+
+          {/* ✅ TAMBAHAN: Input Es Batu */}
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Es Batu (kg)</label>
+              <input
+                type="number"
+                className="form-input"
+                value={stok.esBatu}
+                onChange={(e) => handleChange('esBatu', e.target.value)}
+              />
+              <small className="form-hint">stok es batu tersedia</small>
+            </div>
+            <div className="form-group">
+              {/* Empty space for grid alignment */}
             </div>
           </div>
 

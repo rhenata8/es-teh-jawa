@@ -7,7 +7,8 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
   const [openEditItem, setOpenEditItem] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
-  const stokDasar = shift?.stokDasar || { sisaCup: 0, cupBesar: 0, gula: 0, teh: 0 };
+  // ✅ TAMBAHKAN esBatu
+  const stokDasar = shift?.stokDasar || { sisaCup: 0, cupBesar: 0, gula: 0, teh: 0, esBatu: 0 };
   const pembuatanTeh = shift?.pembuatanTeh || [];
   const stokJenisTeh = shift?.stokJenisTeh || [];
 
@@ -15,12 +16,14 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
     sisaCup: stokDasar.sisaCup ?? 0,
     cupBesar: stokDasar.cupBesar ?? 0,
     gula: stokDasar.gula ?? 0,
-    teh: stokDasar.teh ?? 0
+    teh: stokDasar.teh ?? 0,
+    esBatu: stokDasar.esBatu ?? 0  // ✅ TAMBAHAN
   });
 
   const [buatTehJenis, setBuatTehJenis] = useState('');
   const [buatTehGula, setBuatTehGula] = useState(0);
   const [buatTehTeh, setBuatTehTeh] = useState(0);
+  const [buatTehEsBatu, setBuatTehEsBatu] = useState(0);  // ✅ TAMBAHAN
 
   const [itemNama, setItemNama] = useState('');
   const [itemHarga, setItemHarga] = useState(0);
@@ -55,7 +58,8 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
         sisaCup: Math.max(0, Number(next.sisaCup) || 0),
         cupBesar: Math.max(0, Number(next.cupBesar) || 0),
         gula: Math.max(0, Number(next.gula) || 0),
-        teh: Math.max(0, Number(next.teh) || 0)
+        teh: Math.max(0, Number(next.teh) || 0),
+        esBatu: Math.max(0, Number(next.esBatu) || 0)  // ✅ TAMBAHAN
       }
     };
     onUpdateShift(updatedShift);
@@ -71,6 +75,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
     setBuatTehJenis('');
     setBuatTehGula(0);
     setBuatTehTeh(0);
+    setBuatTehEsBatu(0);  // ✅ TAMBAHAN
   };
 
   const resetTambahItem = () => {
@@ -80,28 +85,34 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
     setItemSatuan('cup');
   };
 
+  // ✅ PERBAIKAN: Tambahkan es batu di pembuatan teh
   const handleBuatTeh = () => {
     const gulaDipakai = Math.max(0, Number(buatTehGula) || 0);
     const tehDipakai = Math.max(0, Number(buatTehTeh) || 0);
+    const esBatuDipakai = Math.max(0, Number(buatTehEsBatu) || 0);
 
     const gulaTersedia = Math.max(0, Number(localStokDasar.gula) || 0);
     const tehTersedia = Math.max(0, Number(localStokDasar.teh) || 0);
+    const esBatuTersedia = Math.max(0, Number(localStokDasar.esBatu) || 0);
 
     const gulaFinal = Math.min(gulaDipakai, gulaTersedia);
     const tehFinal = Math.min(tehDipakai, tehTersedia);
+    const esBatuFinal = Math.min(esBatuDipakai, esBatuTersedia);
 
     const record = {
       id: Date.now(),
       waktu: new Date().toISOString(),
       jenisTeh: buatTehJenis.trim(),
       gulaKg: gulaFinal,
-      tehGram: tehFinal
+      tehGram: tehFinal,
+      esBatuKg: esBatuFinal  // ✅ TAMBAHAN
     };
 
     const nextStok = {
       ...localStokDasar,
       gula: gulaTersedia - gulaFinal,
-      teh: tehTersedia - tehFinal
+      teh: tehTersedia - tehFinal,
+      esBatu: esBatuTersedia - esBatuFinal  // ✅ TAMBAHAN
     };
 
     const updatedShift = {
@@ -110,7 +121,8 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
         sisaCup: Math.max(0, Number(nextStok.sisaCup) || 0),
         cupBesar: Math.max(0, Number(nextStok.cupBesar) || 0),
         gula: Math.max(0, Number(nextStok.gula) || 0),
-        teh: Math.max(0, Number(nextStok.teh) || 0)
+        teh: Math.max(0, Number(nextStok.teh) || 0),
+        esBatu: Math.max(0, Number(nextStok.esBatu) || 0)  // ✅ TAMBAHAN
       },
       pembuatanTeh: [...pembuatanTeh, record]
     };
@@ -295,6 +307,22 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                   <td>gram</td>
                   <td className="status-text success">stok teh tersedia</td>
                 </tr>
+                {/* ✅ TAMBAHAN: Stok Es Batu */}
+                <tr>
+                  <td>Es Batu</td>
+                  <td>
+                    <input
+                      className="stok-input"
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={localStokDasar.esBatu}
+                      onChange={(e) => handleStokChange('esBatu', e.target.value)}
+                    />
+                  </td>
+                  <td>kg</td>
+                  <td className="status-text success">stok es batu tersedia</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -324,8 +352,9 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                   <tr>
                     <th>Waktu</th>
                     <th>Jenis Teh</th>
-                    <th>Gula Digunakan</th>
-                    <th>Teh Digunakan</th>
+                    <th>Gula</th>
+                    <th>Teh</th>
+                    <th>Es Batu</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -335,6 +364,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                       <td>{r.jenisTeh}</td>
                       <td>{Number(r.gulaKg || 0)} kg</td>
                       <td>{Number(r.tehGram || 0)} gram</td>
+                      <td>{Number(r.esBatuKg || 0)} kg</td>
                     </tr>
                   ))}
                 </tbody>
@@ -429,9 +459,10 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
 
               <div className="section-card" style={{ padding: 16, marginBottom: 20, background: '#EAF3FF' }}>
                 <div style={{ fontWeight: 700, color: '#6B3410', marginBottom: 8 }}>Stok Tersedia:</div>
-                <div style={{ display: 'flex', gap: 30, color: '#3B5AA6' }}>
+                <div style={{ display: 'flex', gap: 20, color: '#3B5AA6', flexWrap: 'wrap' }}>
                   <div>Gula: <span style={{ fontWeight: 800 }}>{Number(localStokDasar.gula || 0)} kg</span></div>
                   <div>Teh: <span style={{ fontWeight: 800 }}>{Number(localStokDasar.teh || 0)} gram</span></div>
+                  <div>Es Batu: <span style={{ fontWeight: 800 }}>{Number(localStokDasar.esBatu || 0)} kg</span></div>
                 </div>
               </div>
 
@@ -447,7 +478,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label required">Gula (kg)</label>
+                  <label className="form-label">Gula (kg)</label>
                   <input
                     className="form-input"
                     type="number"
@@ -455,10 +486,12 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                     step="0.1"
                     value={buatTehGula}
                     onChange={(e) => setBuatTehGula(e.target.value)}
+                    placeholder="Opsional"
                   />
+                  <small className="form-hint">Kosongkan jika tidak menggunakan gula</small>
                 </div>
                 <div className="form-group">
-                  <label className="form-label required">Teh (gram)</label>
+                  <label className="form-label">Teh (gram)</label>
                   <input
                     className="form-input"
                     type="number"
@@ -466,8 +499,25 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                     step="1"
                     value={buatTehTeh}
                     onChange={(e) => setBuatTehTeh(e.target.value)}
+                    placeholder="Opsional"
                   />
+                  <small className="form-hint">Kosongkan jika tidak menggunakan teh</small>
                 </div>
+              </div>
+
+              {/* ✅ TAMBAHAN: Input Es Batu */}
+              <div className="form-group">
+                <label className="form-label">Es Batu (kg)</label>
+                <input
+                  className="form-input"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={buatTehEsBatu}
+                  onChange={(e) => setBuatTehEsBatu(e.target.value)}
+                  placeholder="Opsional"
+                />
+                <small className="form-hint">Kosongkan jika tidak menggunakan es batu</small>
               </div>
 
               <div className="modal-actions">
