@@ -9,7 +9,8 @@ function Pengeluaran({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
   const [satuan, setSatuan] = useState('');
   const [hargaSatuan, setHargaSatuan] = useState(0);
 
-  const pengeluaran = shift.pengeluaran || [];
+  // ✅ PERBAIKAN: Wrap dalam useMemo
+  const pengeluaran = useMemo(() => shift?.pengeluaran || [], [shift?.pengeluaran]);
 
   const totalPengeluaran = useMemo(() => {
     return pengeluaran.reduce((sum, p) => sum + (p.total || 0), 0);
