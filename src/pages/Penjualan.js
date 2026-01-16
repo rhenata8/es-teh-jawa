@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ShoppingBag, DollarSign, CreditCard, Filter } from 'lucide-react';
 
-export default function Penjualan({ penjualan }) {
+export default function Penjualan({ penjualan, shift }) {
   const [filterMetode, setFilterMetode] = useState('SEMUA');
   const [filterJenisTeh, setFilterJenisTeh] = useState('SEMUA');
 
@@ -58,6 +58,14 @@ export default function Penjualan({ penjualan }) {
       teaCount 
     };
   }, [filteredPenjualan]);
+
+  // ✅ TAMBAHAN: Hitung total pengeluaran dan uang tunai bersih
+  const totalPengeluaran = useMemo(() => {
+    const pengeluaran = shift?.pengeluaran || [];
+    return pengeluaran.reduce((sum, p) => sum + (p.total || 0), 0);
+  }, [shift?.pengeluaran]);
+
+  const uangTunaiBersih = stats.tunai - totalPengeluaran;
 
   return (
     <>
@@ -143,6 +151,37 @@ export default function Penjualan({ penjualan }) {
           <div className="stat-amount">Rp {stats.tunai.toLocaleString('id-ID')}</div>
           <div className="stat-subtitle">
             {filteredPenjualan.filter(t => t.metode === 'TUNAI').length} transaksi
+          </div>
+        </div>
+      </div>
+
+      {/* ✅ TAMBAHAN: Section Uang Tunai Bersih */}
+      <div className="section-card" style={{ 
+        marginBottom: 20, 
+        background: uangTunaiBersih >= 0 
+          ? 'linear-gradient(135deg, #D4EDDA 0%, #C3E6CB 100%)' 
+          : 'linear-gradient(135deg, #F8D7DA 0%, #F5C6CB 100%)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#6B3410', marginBottom: 8 }}>
+              💰 Uang Tunai Bersih
+            </div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: uangTunaiBersih >= 0 ? '#155724' : '#721C24' }}>
+              Rp {uangTunaiBersih.toLocaleString('id-ID')}
+            </div>
+            <div style={{ fontSize: 14, color: '#666', marginTop: 5 }}>
+              Tunai: Rp {stats.tunai.toLocaleString('id-ID')} - Pengeluaran: Rp {totalPengeluaran.toLocaleString('id-ID')}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 14, color: '#666' }}>Total Pengeluaran</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#DC3545' }}>
+              Rp {totalPengeluaran.toLocaleString('id-ID')}
+            </div>
+            <div style={{ fontSize: 12, color: '#999', marginTop: 3 }}>
+              {shift?.pengeluaran?.length || 0} item
+            </div>
           </div>
         </div>
       </div>

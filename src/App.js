@@ -324,7 +324,7 @@ function App() {
           </div>
 
           <div className="main-content">
-            <Penjualan penjualan={currentShift.transaksi || []} />
+            <Penjualan penjualan={currentShift.transaksi || []} shift={currentShift} />
           </div>
         </div>
       );
