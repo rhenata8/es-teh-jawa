@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Plus, Package, Coffee, Edit2, Save } from 'lucide-react';
 
 function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {

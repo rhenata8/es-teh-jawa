@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import PaymentModal from "../components/PaymentModal";
 import "../App.css";
 
@@ -68,7 +68,6 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
     }
 
     // Check stock availability
-    const cartItem = cart.find(c => c.id === itemId);
     const menuItem = menu.find(m => m.id === itemId);
     if (menuItem) {
       const soldCount = getSoldCount(menuItem.namaItem);
@@ -92,7 +91,6 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
     0
   );
 
-  // PERBAIKAN: Fungsi ini yang diperbaiki
   const handleConfirmPayment = (metode) => {
     // Calculate total cups used
     const totalCups = cart.reduce((sum, item) => sum + item.qty, 0);
