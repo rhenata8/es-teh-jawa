@@ -1,5 +1,6 @@
+// src/pages/Stok.js
 import React, { useMemo, useState } from 'react';
-import { Plus, Package, Coffee, Edit2, Save } from 'lucide-react';
+import { Plus, Package, Coffee, Edit2, Trash2, Save } from 'lucide-react';
 
 function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
   const [openBuatTeh, setOpenBuatTeh] = useState(false);
@@ -7,8 +8,8 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
   const [openEditItem, setOpenEditItem] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
-  // ✅ TAMBAHKAN esBatu
-  const stokDasar = shift?.stokDasar || { sisaCup: 0, cupBesar: 0, gula: 0, teh: 0, esBatu: 0 };
+  // ✅ Inisialisasi properti susu dengan nilai default agar tidak menghasilkan undefined/NaN
+  const stokDasar = shift?.stokDasar || { sisaCup: 0, cupBesar: 0, gula: 0, teh: 0, esBatu: 0, susu: 0 };
   const pembuatanTeh = shift?.pembuatanTeh || [];
   const stokJenisTeh = shift?.stokJenisTeh || [];
 
@@ -17,13 +18,14 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
     cupBesar: stokDasar.cupBesar ?? 0,
     gula: stokDasar.gula ?? 0,
     teh: stokDasar.teh ?? 0,
-    esBatu: stokDasar.esBatu ?? 0  // ✅ TAMBAHAN
+    esBatu: stokDasar.esBatu ?? 0,
+    susu: stokDasar.susu ?? 0 // ✅ Sinkronisasi variabel susu sachet lokal
   });
 
   const [buatTehJenis, setBuatTehJenis] = useState('');
   const [buatTehGula, setBuatTehGula] = useState(0);
   const [buatTehTeh, setBuatTehTeh] = useState(0);
-  const [buatTehEsBatu, setBuatTehEsBatu] = useState(0);  // ✅ TAMBAHAN
+  const [buatTehEsBatu, setBuatTehEsBatu] = useState(0);
 
   const [itemNama, setItemNama] = useState('');
   const [itemHarga, setItemHarga] = useState(0);
@@ -59,7 +61,8 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
         cupBesar: Math.max(0, Number(next.cupBesar) || 0),
         gula: Math.max(0, Number(next.gula) || 0),
         teh: Math.max(0, Number(next.teh) || 0),
-        esBatu: Math.max(0, Number(next.esBatu) || 0)  // ✅ TAMBAHAN
+        esBatu: Math.max(0, Number(next.esBatu) || 0),
+        susu: Math.max(0, Number(next.susu) || 0) // ✅ Sinkronisasi global shift data
       }
     };
     onUpdateShift(updatedShift);
@@ -75,7 +78,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
     setBuatTehJenis('');
     setBuatTehGula(0);
     setBuatTehTeh(0);
-    setBuatTehEsBatu(0);  // ✅ TAMBAHAN
+    setBuatTehEsBatu(0);
   };
 
   const resetTambahItem = () => {
@@ -85,7 +88,31 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
     setItemSatuan('cup');
   };
 
-  // ✅ PERBAIKAN: Tambahkan es batu di pembuatan teh
+  // 🗑️ FUNGSI BARU: Menghapus data dari riwayat Pembuatan Teh
+  const handleHapusPembuatanTeh = (id) => {
+    if (window.confirm("Apakah Anda yakin ingin menghapus riwayat pembuatan teh ini?")) {
+      const updatedShift = {
+        ...shift,
+        pembuatanTeh: pembuatanTeh.filter(item => item.id !== id)
+      };
+      onUpdateShift(updatedShift);
+    }
+  };
+
+  // 🗑️ FUNGSI BARU: Menghapus menu varian teh secara permanen dari daftar produk
+  const handleHapusMenuTeh = (id) => {
+    if (window.confirm("Apakah Anda yakin ingin menghapus menu varian produk ini?")) {
+      const updatedItems = stokJenisTeh.filter(item => item.id !== id);
+      const updatedShift = {
+        ...shift,
+        stokJenisTeh: updatedItems
+      };
+      onUpdateShift(updatedShift);
+      // Sinkronkan ke local storage browser untuk pembaruan instan
+      localStorage.setItem('tea-shop-global-menu', JSON.stringify(updatedItems));
+    }
+  };
+
   const handleBuatTeh = () => {
     const gulaDipakai = Math.max(0, Number(buatTehGula) || 0);
     const tehDipakai = Math.max(0, Number(buatTehTeh) || 0);
@@ -105,14 +132,14 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
       jenisTeh: buatTehJenis.trim(),
       gulaKg: gulaFinal,
       tehGram: tehFinal,
-      esBatuKg: esBatuFinal  // ✅ TAMBAHAN
+      esBatuKg: esBatuFinal
     };
 
     const nextStok = {
       ...localStokDasar,
       gula: gulaTersedia - gulaFinal,
       teh: tehTersedia - tehFinal,
-      esBatu: esBatuTersedia - esBatuFinal  // ✅ TAMBAHAN
+      esBatu: esBatuTersedia - esBatuFinal
     };
 
     const updatedShift = {
@@ -122,7 +149,8 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
         cupBesar: Math.max(0, Number(nextStok.cupBesar) || 0),
         gula: Math.max(0, Number(nextStok.gula) || 0),
         teh: Math.max(0, Number(nextStok.teh) || 0),
-        esBatu: Math.max(0, Number(nextStok.esBatu) || 0)  // ✅ TAMBAHAN
+        esBatu: Math.max(0, Number(nextStok.esBatu) || 0),
+        susu: Math.max(0, Number(nextStok.susu) || 0)
       },
       pembuatanTeh: [...pembuatanTeh, record]
     };
@@ -142,12 +170,14 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
       satuan: itemSatuan.trim()
     };
 
+    const updatedItems = [...stokJenisTeh, newItem];
     const updatedShift = {
       ...shift,
-      stokJenisTeh: [...stokJenisTeh, newItem]
+      stokJenisTeh: updatedItems
     };
 
     onUpdateShift(updatedShift);
+    localStorage.setItem('tea-shop-global-menu', JSON.stringify(updatedItems));
     setOpenTambahItem(false);
     resetTambahItem();
   };
@@ -181,6 +211,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
     };
 
     onUpdateShift(updatedShift);
+    localStorage.setItem('tea-shop-global-menu', JSON.stringify(updatedItems));
     setOpenEditItem(false);
     setEditingItem(null);
     resetTambahItem();
@@ -194,6 +225,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
 
     const updatedShift = { ...shift, stokJenisTeh: next };
     onUpdateShift(updatedShift);
+    localStorage.setItem('tea-shop-global-menu', JSON.stringify(next));
   };
 
   return (
@@ -307,7 +339,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                   <td>gram</td>
                   <td className="status-text success">stok teh tersedia</td>
                 </tr>
-                {/* ✅ TAMBAHAN: Stok Es Batu */}
                 <tr>
                   <td>Es Batu</td>
                   <td>
@@ -322,6 +353,22 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                   </td>
                   <td>kg</td>
                   <td className="status-text success">stok es batu tersedia</td>
+                </tr>
+                {/* ✅ BARIS INPUT BARU: Susu Sachet (tidak akan hilang) */}
+                <tr>
+                  <td>Susu Sachet</td>
+                  <td>
+                    <input
+                      className="stok-input"
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={localStokDasar.susu}
+                      onChange={(e) => handleStokChange('susu', e.target.value)}
+                    />
+                  </td>
+                  <td>sachet</td>
+                  <td className="status-text success">digunakan otomatis oleh Milk, Matcha & Thai Tea</td>
                 </tr>
               </tbody>
             </table>
@@ -355,6 +402,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                     <th>Gula</th>
                     <th>Teh</th>
                     <th>Es Batu</th>
+                    <th>Aksi</th> {/* ✅ Judul kolom aksi hapas */}
                   </tr>
                 </thead>
                 <tbody>
@@ -365,6 +413,15 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                       <td>{Number(r.gulaKg || 0)} kg</td>
                       <td>{Number(r.tehGram || 0)} gram</td>
                       <td>{Number(r.esBatuKg || 0)} kg</td>
+                      <td>
+                        {/* ✅ Tombol Hapus Riwayat Pembuatan */}
+                        <button 
+                          onClick={() => handleHapusPembuatanTeh(r.id)} 
+                          style={{ background: 'none', border: 'none', color: '#DC3545', cursor: 'pointer' }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -435,11 +492,21 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                           </span>
                         </td>
                         <td>
+                          {/* ✅ Tombol Edit Menu */}
                           <button 
                             className="edit-btn"
                             onClick={() => handleEditItem(it)}
+                            style={{ marginRight: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#007BFF' }}
                           >
                             <Edit2 size={16} />
+                          </button>
+                          {/* ✅ Tombol Hapus Varian Menu */}
+                          <button 
+                            className="delete-btn"
+                            onClick={() => handleHapusMenuTeh(it.id)}
+                            style={{ background: 'none', border: 'none', color: '#DC3545', cursor: 'pointer' }}
+                          >
+                            <Trash2 size={16} />
                           </button>
                         </td>
                       </tr>
@@ -505,7 +572,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                 </div>
               </div>
 
-              {/* ✅ TAMBAHAN: Input Es Batu */}
               <div className="form-group">
                 <label className="form-label">Es Batu (kg)</label>
                 <input

@@ -1,4 +1,5 @@
-import { useState } from "react";
+// src/pages/Kasir.js
+import React, { useState } from "react";
 import PaymentModal from "../components/PaymentModal";
 import "../App.css";
 
@@ -6,11 +7,9 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
   const [cart, setCart] = useState([]);
   const [showPayment, setShowPayment] = useState(false);
 
-  // Get menu from stokJenisTeh
   const menu = shift?.stokJenisTeh || [];
 
   const addToCart = (item) => {
-    // Check if there's enough stock
     const currentStok = item.stokAwal || 0;
     const currentInCart = cart.find(c => c.id === item.id)?.qty || 0;
     const soldCount = getSoldCount(item.namaItem);
@@ -23,11 +22,7 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
 
     const existing = cart.find((c) => c.id === item.id);
     if (existing) {
-      setCart(
-        cart.map((c) =>
-          c.id === item.id ? { ...c, qty: c.qty + 1 } : c
-        )
-      );
+      setCart(cart.map((c) => c.id === item.id ? { ...c, qty: c.qty + 1 } : c));
     } else {
       setCart([...cart, { 
         id: item.id, 
@@ -67,7 +62,6 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
       return;
     }
 
-    // Check stock availability
     const menuItem = menu.find(m => m.id === itemId);
     if (menuItem) {
       const soldCount = getSoldCount(menuItem.namaItem);
@@ -79,66 +73,67 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
       }
     }
 
-    setCart(
-      cart.map((c) =>
-        c.id === itemId ? { ...c, qty: newQty } : c
-      )
-    );
+    setCart(cart.map((c) => c.id === itemId ? { ...c, qty: newQty } : c));
   };
 
-  const total = cart.reduce(
-    (sum, item) => sum + item.harga * item.qty,
-    0
-  );
+  const total = cart.reduce((sum, item) => sum + item.harga * item.qty, 0);
 
   const handleConfirmPayment = (metode) => {
-    // Calculate total cups used
     const totalCups = cart.reduce((sum, item) => sum + item.qty, 0);
-    
-    // Check if enough cups available
     const currentCups = (shift?.stokDasar?.sisaCup || 0) + (shift?.stokDasar?.cupBesar || 0);
+    
     if (totalCups > currentCups) {
       alert(`Stok cup tidak cukup! Tersisa ${currentCups} cup`);
       return;
     }
 
-    // Create transaction object
+    let totalSusuDibutuhkan = 0;
+    cart.forEach(item => {
+      const namaSaja = item.nama.toLowerCase();
+      if (namaSaja.includes("milk") || namaSaja.includes("thai tea") || namaSaja.includes("matcha")) {
+        totalSusuDibutuhkan += 0.5 * item.qty;
+      }
+    });
+
+    const stokSusuSekarang = shift?.stokDasar?.susu || 0;
+    if (totalSusuDibutuhkan > stokSusuSekarang) {
+      alert(`Stok Susu tidak cukup! Dibutuhkan ${totalSusuDibutuhkan} sachet, sisa stok: ${stokSusuSekarang} sachet`);
+      return;
+    }
+
     const newTransaction = {
+      id: Date.now(),
       metode,
       total,
       items: cart,
       waktu: new Date().toISOString()
     };
 
-    // Add transaction
     addPenjualan(newTransaction);
 
-    // Update cup stock AND add transaction to shift
     const updatedShift = {
       ...shift,
       stokDasar: {
         ...shift.stokDasar,
         sisaCup: Math.max(0, currentCups - totalCups),
-        cupBesar: 0
+        cupBesar: 0,
+        susu: Math.max(0, stokSusuSekarang - totalSusuDibutuhkan)
       },
       transaksi: [...(shift.transaksi || []), newTransaction]
     };
+    
     onUpdateShift(updatedShift);
-
     setCart([]);
     setShowPayment(false);
-    alert(`Pembayaran berhasil!\nTotal: Rp ${total.toLocaleString('id-ID')}\nCup digunakan: ${totalCups}`);
+    alert(`Pembayaran sukses!`);
   };
 
   return (
     <>
       <h1 className="page-title">Kasir</h1>
-      
       {menu.length === 0 ? (
-        <div className="empty-state" style={{ minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-          <div className="empty-state-icon">📦</div>
+        <div className="empty-state">
           <p className="empty-state-text">Belum ada menu tersedia</p>
-          <p style={{ color: '#666', marginTop: 10 }}>Silakan tambahkan menu di halaman Stok terlebih dahulu</p>
         </div>
       ) : (
         <div className="kasir-container">
@@ -149,7 +144,6 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
                 {menu.map((item) => {
                   const availableStok = getAvailableStok(item);
                   const isOutOfStock = availableStok === 0;
-                  
                   return (
                     <div
                       key={item.id}
@@ -158,7 +152,7 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
                     >
                       <h4 className="menu-item-name">{item.namaItem}</h4>
                       <p className="menu-item-price">Rp {item.harga?.toLocaleString('id-ID')}</p>
-                      <span className={`stok-badge ${isOutOfStock ? 'empty' : availableStok < 5 ? 'low' : 'available'}`}>
+                      <span className={`stok-badge ${isOutOfStock ? 'empty' : 'available'}`}>
                         {isOutOfStock ? 'Habis' : `Stok: ${availableStok}`}
                       </span>
                     </div>
@@ -171,13 +165,10 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
           <div className="cart-section">
             <div className="section-card">
               <h2 className="section-title">Pesanan</h2>
-
-              {/* Cup Stock Info */}
-              <div className="cup-stock-info">
-                <span>Cup Tersedia:</span>
-                <strong>{((shift?.stokDasar?.sisaCup || 0) + (shift?.stokDasar?.cupBesar || 0))} pcs</strong>
+              <div className="cup-stock-info" style={{ marginBottom: 10 }}>
+                <span>Susu Tersedia:</span>
+                <strong>{shift?.stokDasar?.susu || 0} sachet</strong>
               </div>
-
               {cart.length === 0 ? (
                 <p className="cart-empty">Belum ada pesanan</p>
               ) : (
@@ -187,60 +178,28 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
                       <div key={item.id} className="cart-item">
                         <div className="cart-item-header">
                           <span className="cart-item-name">{item.nama}</span>
-                          <button 
-                            className="cart-item-remove"
-                            onClick={() => removeFromCart(item.id)}
-                          >
-                            ×
-                          </button>
+                          <button className="cart-item-remove" onClick={() => removeFromCart(item.id)}>×</button>
                         </div>
                         <div className="cart-item-controls">
                           <div className="quantity-controls">
-                            <button 
-                              className="quantity-btn"
-                              onClick={() => updateQuantity(item.id, item.qty - 1)}
-                            >
-                              −
-                            </button>
+                            <button className="quantity-btn" onClick={() => updateQuantity(item.id, item.qty - 1)}>−</button>
                             <span className="quantity-value">{item.qty}</span>
-                            <button 
-                              className="quantity-btn"
-                              onClick={() => updateQuantity(item.id, item.qty + 1)}
-                            >
-                              +
-                            </button>
+                            <button className="quantity-btn" onClick={() => updateQuantity(item.id, item.qty + 1)}>+</button>
                           </div>
-                          <span className="cart-item-price">
-                            Rp {(item.qty * item.harga).toLocaleString('id-ID')}
-                          </span>
+                          <span className="cart-item-price">Rp {(item.qty * item.harga).toLocaleString('id-ID')}</span>
                         </div>
                       </div>
                     ))}
                   </div>
-
                   <div className="cart-total">
-                    <div className="cart-total-row">
-                      <span>Total</span>
-                      <strong className="cart-total-amount">Rp {total.toLocaleString('id-ID')}</strong>
-                    </div>
-                    <button
-                      className="cart-checkout-btn"
-                      onClick={() => setShowPayment(true)}
-                    >
-                      Bayar
-                    </button>
+                    <button className="cart-checkout-btn" onClick={() => setShowPayment(true)}>Bayar</button>
                   </div>
                 </>
               )}
             </div>
           </div>
-
           {showPayment && (
-            <PaymentModal
-              total={total}
-              onConfirm={handleConfirmPayment}
-              onClose={() => setShowPayment(false)}
-            />
+            <PaymentModal total={total} onConfirm={handleConfirmPayment} onClose={() => setShowPayment(false)} />
           )}
         </div>
       )}

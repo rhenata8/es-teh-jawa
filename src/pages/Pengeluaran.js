@@ -1,15 +1,17 @@
+// src/pages/Pengeluaran.js
 import React, { useMemo, useState } from 'react';
-import { Plus, DollarSign } from 'lucide-react';
+import { Plus, DollarSign, Edit2, Trash2 } from 'lucide-react';
 
 function Pengeluaran({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
   const [openModal, setOpenModal] = useState(false);
+  const [editingId, setEditingId] = useState(null); // ✅ Tracking item yang sedang diedit
 
   const [item, setItem] = useState('');
   const [jumlah, setJumlah] = useState(1);
   const [satuan, setSatuan] = useState('');
   const [hargaSatuan, setHargaSatuan] = useState(0);
 
-  // ✅ PERBAIKAN: Wrap dalam useMemo
+  // ✅ Wrap dalam useMemo
   const pengeluaran = useMemo(() => shift?.pengeluaran || [], [shift?.pengeluaran]);
 
   const totalPengeluaran = useMemo(() => {
@@ -32,6 +34,28 @@ function Pengeluaran({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
     setJumlah(1);
     setSatuan('');
     setHargaSatuan(0);
+    setEditingId(null);
+  };
+
+  // 📝 FUNGSI BARU: Trigger pengeditan item pengeluaran
+  const handleEditClick = (p) => {
+    setEditingId(p.id);
+    setItem(p.item);
+    setJumlah(p.jumlah);
+    setSatuan(p.satuan);
+    setHargaSatuan(p.hargaSatuan);
+    setOpenModal(true);
+  };
+
+  // 🗑️ FUNGSI BARU: Menghapus item pengeluaran
+  const handleHapusPengeluaran = (id) => {
+    if (window.confirm("Apakah Anda yakin ingin menghapus catatan pengeluaran ini?")) {
+      const updatedShift = {
+        ...shift,
+        pengeluaran: pengeluaran.filter((p) => p.id !== id)
+      };
+      onUpdateShift(updatedShift);
+    }
   };
 
   const handleSave = () => {
@@ -39,31 +63,55 @@ function Pengeluaran({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
     const cleanHarga = Number.isFinite(Number(hargaSatuan)) ? Number(hargaSatuan) : 0;
     const total = Math.max(0, cleanJumlah) * Math.max(0, cleanHarga);
 
+    // Hitung sisa uang tunai bayangan (jika mode edit, abaikan sementara total lama dari perhitungan)
+    const pengeluaranLama = editingId ? (pengeluaran.find(p => p.id === editingId)?.total || 0) : 0;
+    const uangTunaiPenyesuaian = uangTunaiTersisa + pengeluaranLama;
+
     // ✅ VALIDASI: Cek apakah uang tunai cukup
-    if (total > uangTunaiTersisa) {
-      alert(`Uang tunai tidak cukup!\n\nUang tunai tersedia: Rp ${uangTunaiTersisa.toLocaleString('id-ID')}\nPengeluaran: Rp ${total.toLocaleString('id-ID')}\n\nKekurangan: Rp ${(total - uangTunaiTersisa).toLocaleString('id-ID')}`);
+    if (total > uangTunaiPenyesuaian) {
+      alert(`Uang tunai tidak cukup!\n\nUang tunai tersedia: Rp ${uangTunaiPenyesuaian.toLocaleString('id-ID')}\nPengeluaran: Rp ${total.toLocaleString('id-ID')}`);
       return;
     }
 
-    const newExpense = {
-      id: Date.now(),
-      waktu: new Date().toISOString(),
-      item: item.trim(),
-      jumlah: Math.max(0, cleanJumlah),
-      satuan: satuan.trim(),
-      hargaSatuan: Math.max(0, cleanHarga),
-      total
-    };
+    let updatedPengeluaranList;
+
+    if (editingId) {
+      // Jika dalam mode EDIT, perbarui data item yang cocok
+      updatedPengeluaranList = pengeluaran.map((p) =>
+        p.id === editingId
+          ? {
+              ...p,
+              item: item.trim(),
+              jumlah: Math.max(0, cleanJumlah),
+              satuan: satuan.trim(),
+              hargaSatuan: Math.max(0, cleanHarga),
+              total
+            }
+          : p
+      );
+    } else {
+      // Jika dalam mode TAMBAH BARU
+      const newExpense = {
+        id: Date.now(),
+        waktu: new Date().toISOString(),
+        item: item.trim(),
+        jumlah: Math.max(0, cleanJumlah),
+        satuan: satuan.trim(),
+        hargaSatuan: Math.max(0, cleanHarga),
+        total
+      };
+      updatedPengeluaranList = [...pengeluaran, newExpense];
+    }
 
     const updatedShift = {
       ...shift,
-      pengeluaran: [...pengeluaran, newExpense]
+      pengeluaran: updatedPengeluaranList
     };
 
     onUpdateShift(updatedShift);
     setOpenModal(false);
     resetForm();
-    alert(`Pengeluaran berhasil dicatat!\n\nTotal: Rp ${total.toLocaleString('id-ID')}\nUang tunai tersisa: Rp ${(uangTunaiTersisa - total).toLocaleString('id-ID')}`);
+    alert(editingId ? "Pengeluaran berhasil diperbarui!" : "Pengeluaran berhasil dicatat!");
   };
 
   return (
@@ -96,13 +144,13 @@ function Pengeluaran({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
       <div className="main-content">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <h1 className="page-title">Pengeluaran</h1>
-          <button className="add-button" onClick={() => setOpenModal(true)}>
+          <button className="add-button" onClick={() => { resetForm(); setOpenModal(true); }}>
             <Plus size={18} />
             Tambah Pengeluaran
           </button>
         </div>
 
-        {/* ✅ TAMBAHAN: Info Uang Tunai */}
+        {/* ✅ Info Uang Tunai */}
         <div className="stats-grid" style={{ marginBottom: 20 }}>
           <div className="stat-card blue">
             <div className="stat-header">
@@ -149,6 +197,7 @@ function Pengeluaran({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                   <th>Jumlah</th>
                   <th>Harga Satuan</th>
                   <th>Total</th>
+                  <th>Aksi</th> {/* ✅ Kolom Aksi Baru */}
                 </tr>
               </thead>
               <tbody>
@@ -159,6 +208,22 @@ function Pengeluaran({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                     <td>{p.jumlah} {p.satuan}</td>
                     <td>Rp {Number(p.hargaSatuan || 0).toLocaleString('id-ID')}</td>
                     <td>Rp {Number(p.total || 0).toLocaleString('id-ID')}</td>
+                    <td>
+                      {/* ✅ Tombol Edit Catatan */}
+                      <button 
+                        onClick={() => handleEditClick(p)} 
+                        style={{ background: 'none', border: 'none', color: '#007BFF', cursor: 'pointer', marginRight: 10 }}
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      {/* ✅ Tombol Hapus Catatan */}
+                      <button 
+                        onClick={() => handleHapusPengeluaran(p.id)} 
+                        style={{ background: 'none', border: 'none', color: '#DC3545', cursor: 'pointer' }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -169,16 +234,12 @@ function Pengeluaran({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
         {openModal && (
           <div className="modal-overlay" onClick={() => { setOpenModal(false); resetForm(); }}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-title">Tambah Pengeluaran</div>
+              <div className="modal-title">{editingId ? "Edit Pengeluaran" : "Tambah Pengeluaran"}</div>
 
-              {/* ✅ TAMBAHAN: Info uang tunai di modal */}
               <div className="section-card" style={{ padding: 16, marginBottom: 20, background: uangTunaiTersisa > 0 ? '#D1ECF1' : '#F8D7DA' }}>
                 <div style={{ fontWeight: 700, color: '#6B3410', marginBottom: 8 }}>Uang Tunai Tersedia:</div>
                 <div style={{ fontSize: 24, fontWeight: 800, color: uangTunaiTersisa > 0 ? '#0C5460' : '#721C24' }}>
                   Rp {uangTunaiTersisa.toLocaleString('id-ID')}
-                </div>
-                <div style={{ fontSize: 13, color: '#666', marginTop: 5 }}>
-                  Pengeluaran akan dikurangi dari uang tunai
                 </div>
               </div>
 
@@ -233,20 +294,6 @@ function Pengeluaran({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                     Rp {(Math.max(0, Number(jumlah) || 0) * Math.max(0, Number(hargaSatuan) || 0)).toLocaleString('id-ID')}
                   </span>
                 </div>
-                {/* ✅ TAMBAHAN: Warning jika melebihi uang tunai */}
-                {(Math.max(0, Number(jumlah) || 0) * Math.max(0, Number(hargaSatuan) || 0)) > uangTunaiTersisa && (
-                  <div style={{ 
-                    marginTop: 10, 
-                    padding: 10, 
-                    background: '#F8D7DA', 
-                    borderRadius: 8,
-                    color: '#721C24',
-                    fontSize: 14,
-                    fontWeight: 600
-                  }}>
-                    ⚠️ Pengeluaran melebihi uang tunai tersedia!
-                  </div>
-                )}
               </div>
 
               <div className="modal-actions">

@@ -1,3 +1,4 @@
+// src/components/PaymentModal.jsx
 import React from "react";
 import { CreditCard, Banknote, X } from "lucide-react";
 import "../App.css";

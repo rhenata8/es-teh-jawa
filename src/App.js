@@ -1,3 +1,4 @@
+// src/App.js
 import { useState, useEffect } from "react";
 import Portal from "./pages/Portal";
 import MulaiShift from "./pages/MulaiShift";
@@ -17,57 +18,36 @@ function App() {
   const [shifts, setShifts] = useState([]);
   const [selectedShift, setSelectedShift] = useState(null);
 
-  // Global persistent menu data that carries over between shifts
+  // ✅ PERBAIKAN: Gunakan data dari jenisTeh secara langsung agar properti objek sinkron
   const [globalMenuData, setGlobalMenuData] = useState(() => {
-    return jenisTeh.map(item => ({
-      id: item.id,
-      namaItem: item.nama,
-      harga: item.harga,
-      stokAwal: item.stok,
-      satuan: 'cup'
-    }));
+    return jenisTeh; 
   });
 
-  // ✅ PERBAIKAN: Load data from localStorage (browser storage)
+  // ✅ LOAD DATA DARI LOCAL STORAGE
   useEffect(() => {
     const loadData = () => {
       try {
         console.log('Loading data from localStorage...');
         
-        // Load view
         const savedView = localStorage.getItem('tea-shop-view');
-        if (savedView) {
-          console.log('Loaded view:', savedView);
-          setView(savedView);
-        }
+        if (savedView) setView(savedView);
 
-        // Load current shift
         const savedShift = localStorage.getItem('tea-shop-current-shift');
-        if (savedShift) {
-          console.log('Loaded current shift');
-          setCurrentShift(JSON.parse(savedShift));
-        }
+        if (savedShift) setCurrentShift(JSON.parse(savedShift));
 
-        // Load shifts history
         const savedShifts = localStorage.getItem('tea-shop-shifts-history');
-        if (savedShifts) {
-          console.log('Loaded shifts history');
-          setShifts(JSON.parse(savedShifts));
-        }
+        if (savedShifts) setShifts(JSON.parse(savedShifts));
 
-        // Load global menu data
         const savedMenu = localStorage.getItem('tea-shop-global-menu');
         if (savedMenu) {
-          console.log('Loaded global menu');
           setGlobalMenuData(JSON.parse(savedMenu));
+        } else {
+          // Jika di lokal kosong, pasang default bawaan device
+          localStorage.setItem('tea-shop-global-menu', JSON.stringify(jenisTeh));
         }
 
-        // Load selected shift
         const savedSelected = localStorage.getItem('tea-shop-selected-shift');
-        if (savedSelected) {
-          console.log('Loaded selected shift');
-          setSelectedShift(JSON.parse(savedSelected));
-        }
+        if (savedSelected) setSelectedShift(JSON.parse(savedSelected));
         
         console.log('Data loaded successfully!');
       } catch (error) {
@@ -80,18 +60,16 @@ function App() {
     loadData();
   }, []);
 
-  // ✅ PERBAIKAN: Save data to localStorage whenever it changes
+  // ✅ SAVE DATA KE LOCAL STORAGE
   useEffect(() => {
     if (isLoading) return;
     
     try {
-      console.log('Saving data... View:', view);
       localStorage.setItem('tea-shop-view', view);
       localStorage.setItem('tea-shop-current-shift', JSON.stringify(currentShift));
       localStorage.setItem('tea-shop-shifts-history', JSON.stringify(shifts));
       localStorage.setItem('tea-shop-global-menu', JSON.stringify(globalMenuData));
       localStorage.setItem('tea-shop-selected-shift', JSON.stringify(selectedShift));
-      console.log('Data saved!');
     } catch (error) {
       console.error('Failed to save data:', error);
     }
@@ -108,7 +86,6 @@ function App() {
 
   const handleUpdateShift = (updatedShift) => {
     setCurrentShift(updatedShift);
-    
     if (updatedShift.stokJenisTeh) {
       setGlobalMenuData(updatedShift.stokJenisTeh);
     }
@@ -157,7 +134,7 @@ function App() {
     const updatedShift = {
       ...currentShift,
       transaksi: [
-        ...currentShift.transaksi,
+        ...(currentShift.transaksi || []),
         {
           ...transaksi,
           waktu: new Date().toISOString()
@@ -191,70 +168,34 @@ function App() {
     setView('kasir');
   };
 
-  // Show loading screen while data is being loaded
   if (isLoading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#FFF8E7'
-      }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FFF8E7' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 60, marginBottom: 20 }}>☕</div>
-          <div style={{ color: '#C85A00', fontSize: 20, fontWeight: 'bold' }}>
-            Memuat data...
-          </div>
+          <div style={{ color: '#C85A00', fontSize: 20, fontWeight: 'bold' }}>Memuat data...</div>
         </div>
       </div>
     );
   }
 
-  // Portal View
   if (view === 'portal') {
-    return (
-      <Portal 
-        onStartShift={() => setView('mulaiShift')}
-        onViewHistory={() => setView('history')}
-      />
-    );
+    return <Portal onStartShift={() => setView('mulaiShift')} onViewHistory={() => setView('history')} />;
   }
 
-  // Mulai Shift View
   if (view === 'mulaiShift') {
-    return (
-      <MulaiShift 
-        onBack={handleBackToPortal}
-        onStart={handleStartShift}
-      />
-    );
+    return <MulaiShift onBack={handleBackToPortal} onStart={handleStartShift} />;
   }
 
-  // Shift History View
   if (view === 'history') {
-    return (
-      <ShiftHistory 
-        shifts={shifts}
-        onSelectShift={handleSelectShift}
-        onBack={handleBackToPortal}
-      />
-    );
+    return <ShiftHistory shifts={shifts} onSelectShift={handleSelectShift} onBack={handleBackToPortal} />;
   }
 
-  // Shift Detail View
   if (view === 'detail') {
-    return (
-      <ShiftDetail 
-        shift={selectedShift}
-        onBack={handleBackToHistory}
-      />
-    );
+    return <ShiftDetail shift={selectedShift} onBack={handleBackToHistory} />;
   }
 
-  // Active Shift Views
   if (currentShift) {
-    // Kasir View
     if (view === 'kasir') {
       return (
         <div className="sidebar-layout">
@@ -265,36 +206,25 @@ function App() {
                 <div className="sidebar-subtitle">Sistem Kasir</div>
               </div>
             </div>
-
             <div className="sidebar-user">
               <div className="sidebar-user-name">{currentShift.karyawan}</div>
               <div className="sidebar-user-shift">Shift {currentShift.shift}</div>
             </div>
-
             <div className="sidebar-menu">
               <div className="sidebar-menu-item active">Kasir</div>
               <div className="sidebar-menu-item" onClick={() => handleNavigate('penjualan')}>Penjualan</div>
               <div className="sidebar-menu-item" onClick={() => handleNavigate('pengeluaran')}>Pengeluaran</div>
               <div className="sidebar-menu-item" onClick={() => handleNavigate('stok')}>Stok</div>
             </div>
-
-            <button className="sidebar-end-shift" onClick={handleEndShift}>
-              Akhiri Shift
-            </button>
+            <button className="sidebar-end-shift" onClick={handleEndShift}>Akhiri Shift</button>
           </div>
-
           <div className="main-content">
-            <Kasir 
-              addPenjualan={handleAddPenjualan} 
-              shift={currentShift}
-              onUpdateShift={handleUpdateShift}
-            />
+            <Kasir addPenjualan={handleAddPenjualan} shift={currentShift} onUpdateShift={handleUpdateShift} />
           </div>
         </div>
       );
     }
 
-    // Penjualan View
     if (view === 'penjualan') {
       return (
         <div className="sidebar-layout">
@@ -305,55 +235,31 @@ function App() {
                 <div className="sidebar-subtitle">Sistem Kasir</div>
               </div>
             </div>
-
             <div className="sidebar-user">
               <div className="sidebar-user-name">{currentShift.karyawan}</div>
               <div className="sidebar-user-shift">Shift {currentShift.shift}</div>
             </div>
-
             <div className="sidebar-menu">
               <div className="sidebar-menu-item" onClick={handleBackToKasir}>Kasir</div>
               <div className="sidebar-menu-item active">Penjualan</div>
               <div className="sidebar-menu-item" onClick={() => handleNavigate('pengeluaran')}>Pengeluaran</div>
               <div className="sidebar-menu-item" onClick={() => handleNavigate('stok')}>Stok</div>
             </div>
-
-            <button className="sidebar-end-shift" onClick={handleEndShift}>
-              Akhiri Shift
-            </button>
+            <button className="sidebar-end-shift" onClick={handleEndShift}>Akhiri Shift</button>
           </div>
-
           <div className="main-content">
-            <Penjualan penjualan={currentShift.transaksi || []} shift={currentShift} />
+            <Penjualan penjualan={currentShift.transaksi || []} shift={currentShift} onUpdateShift={handleUpdateShift} />
           </div>
         </div>
       );
     }
 
-    // Pengeluaran View
     if (view === 'pengeluaran') {
-      return (
-        <Pengeluaran 
-          shift={currentShift}
-          onUpdateShift={handleUpdateShift}
-          onBack={handleBackToKasir}
-          onNavigate={handleNavigate}
-          onEndShift={handleEndShift}
-        />
-      );
+      return <Pengeluaran shift={currentShift} onUpdateShift={handleUpdateShift} onBack={handleBackToKasir} onNavigate={handleNavigate} onEndShift={handleEndShift} />;
     }
 
-    // Stok View
     if (view === 'stok') {
-      return (
-        <Stok 
-          shift={currentShift}
-          onUpdateShift={handleUpdateShift}
-          onBack={handleBackToKasir}
-          onNavigate={handleNavigate}
-          onEndShift={handleEndShift}
-        />
-      );
+      return <Stok shift={currentShift} onUpdateShift={handleUpdateShift} onBack={handleBackToKasir} onNavigate={handleNavigate} onEndShift={handleEndShift} />;
     }
   }
 
