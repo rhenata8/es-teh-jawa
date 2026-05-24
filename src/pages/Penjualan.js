@@ -1,6 +1,6 @@
 // src/pages/Penjualan.js
 import React, { useMemo, useState } from "react";
-import { Trash2, Edit2, Save, X } from "lucide-react";
+import { Trash2, Edit2, Save, X, DollarSign, CreditCard, ShoppingBag } from "lucide-react";
 
 export default function Penjualan({ penjualan, shift, onUpdateShift }) {
   const [filterMetode, setFilterMetode] = useState("SEMUA");
@@ -178,6 +178,18 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
     alert("Data transaksi penjualan berhasil diperbarui!");
   };
 
+  // ✅ KARTU AKTIF: Menghitung akumulasi statistik pendapatan langsung dari data filter
+  const stats = useMemo(() => {
+    const total = filteredPenjualan.reduce((sum, t) => sum + t.total, 0);
+    const qris = filteredPenjualan
+      .filter((t) => t.metode === "QRIS")
+      .reduce((sum, t) => sum + t.total, 0);
+    const tunai = filteredPenjualan
+      .filter((t) => t.metode === "TUNAI")
+      .reduce((sum, t) => sum + t.total, 0);
+    return { total, qris, tunai, count: filteredPenjualan.length };
+  }, [filteredPenjualan]);
+
   // Hitung total bayangan live di dalam modal edit
   const liveTotalEdit = useMemo(() => {
     return editItems.reduce((sum, item) => sum + item.harga * item.qty, 0);
@@ -213,6 +225,40 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
             </option>
           ))}
         </select>
+      </div>
+
+      {/* ✅ KARTU STATISTIK PENDAPATAN (Stats Grid) */}
+      <div className="stats-grid" style={{ marginBottom: 20 }}>
+        <div className="stat-card green">
+          <div className="stat-header">
+            <DollarSign size={22} />
+            <div className="stat-title">Total Penjualan</div>
+          </div>
+          <div className="stat-amount">Rp {stats.total.toLocaleString("id-ID")}</div>
+          <div className="stat-subtitle">{stats.count} transaksi terfilter</div>
+        </div>
+
+        <div className="stat-card blue">
+          <div className="stat-header">
+            <CreditCard size={22} />
+            <div className="stat-title">Pembayaran QRIS</div>
+          </div>
+          <div className="stat-amount">Rp {stats.qris.toLocaleString("id-ID")}</div>
+          <div className="stat-subtitle">
+            {filteredPenjualan.filter((t) => t.metode === "QRIS").length} transaksi
+          </div>
+        </div>
+
+        <div className="stat-card orange">
+          <div className="stat-header">
+            <ShoppingBag size={22} />
+            <div className="stat-title">Pembayaran Tunai</div>
+          </div>
+          <div className="stat-amount">Rp {stats.tunai.toLocaleString("id-ID")}</div>
+          <div className="stat-subtitle">
+            {filteredPenjualan.filter((t) => t.metode === "TUNAI").length} transaksi
+          </div>
+        </div>
       </div>
 
       <div className="table-container">
