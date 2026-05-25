@@ -6,6 +6,7 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
   const [filterMetode, setFilterMetode] = useState("SEMUA");
   const [filterJenisTeh, setFilterJenisTeh] = useState("SEMUA");
 
+  // State untuk modal edit
   const [openEditModal, setOpenEditModal] = useState(false);
   const [editingTransaksi, setEditingTransaksi] = useState(null);
   const [editMetode, setEditMetode] = useState("TUNAI");
@@ -33,6 +34,7 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
     });
   }, [penjualan, filterMetode, filterJenisTeh]);
 
+  // 🗑️ FUNGSI HAPUS TRANSAKSI (Dengan pengembalian susu)
   const handleHapusTransaksi = (transaksiId) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus/membatalkan penjualan ini?")) {
       const transaksiTarget = shift.transaksi.find((t) => t.id === transaksiId);
@@ -50,7 +52,7 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
       }
 
       const updatedTransaksi = shift.transaksi.filter((t) => t.id !== transaksiId);
-      onUpdateShift({
+      const updatedShift = {
         ...shift,
         stokDasar: {
           ...shift.stokDasar,
@@ -58,10 +60,12 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
           susu: (shift.stokDasar.susu || 0) + totalSusuKembalian,
         },
         transaksi: updatedTransaksi,
-      });
+      };
+      onUpdateShift(updatedShift);
     }
   };
 
+  // 📝 FUNGSI MEMBUKA MODAL EDIT
   const handleOpenEdit = (transaksi) => {
     setEditingTransaksi(transaksi);
     setEditMetode(transaksi.metode);
@@ -69,11 +73,13 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
     setOpenEditModal(true);
   };
 
+  // Mengubah qty item di dalam form modal edit
   const handleQtyChange = (itemId, newQty) => {
     const validQty = Math.max(0, parseInt(newQty) || 0);
     setEditItems(editItems.map((item) => item.id === itemId ? { ...item, qty: validQty } : item));
   };
 
+  // 💾 FUNGSI MENYIMPAN HASIL EDIT TRANSAKSI
   const handleSaveEdit = () => {
     const cupsAwal = editingTransaksi.items.reduce((sum, item) => sum + item.qty, 0);
     let susuAwal = 0;
@@ -101,7 +107,7 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
     const stokSusuTersedia = shift.stokDasar.susu || 0;
 
     if (selisihCup > stokCupTersedia) {
-      alert(`Stok cup tidak mencukupi! Dibutuhkan tambahan ${selisihCup} cup.`);
+      alert(`Stok cup tidak mencukupi untuk perubahan ini! Dibutuhkan tambahan ${selisihCup} cup.`);
       return;
     }
     if (selisihSusu > stokSusuTersedia) {
@@ -116,7 +122,8 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
       return t;
     });
 
-    onUpdateShift({
+    // ✅ PERBAIKAN LOGIKA: Perhitungan variabel dikembalikan langsung tanpa callback arrow function
+    const updatedShift = {
       ...shift,
       stokDasar: {
         ...shift.stokDasar,
@@ -124,7 +131,9 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
         susu: Math.max(0, stokSusuTersedia - selisihSusu),
       },
       transaksi: updatedTransaksi,
-    });
+    };
+
+    onUpdateShift(updatedShift);
     setOpenEditModal(false);
     setEditingTransaksi(null);
     alert("Data transaksi penjualan berhasil diperbarui!");
@@ -134,10 +143,14 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
     const total = filteredPenjualan.reduce((sum, t) => sum + t.total, 0);
     const qris = filteredPenjualan.filter((t) => t.metode === "QRIS").reduce((sum, t) => sum + t.total, 0);
     const tunai = filteredPenjualan.filter((t) => t.metode === "TUNAI").reduce((sum, t) => sum + t.total, 0);
-    return { total, qris, tunai, count: filteredPenjualan.length };
+    
+    // Hitung jumlah baris transaksi per masing-masing metode secara spesifik
+    const qrisCount = filteredPenjualan.filter((t) => t.metode === "QRIS").length;
+    const tunaiCount = filteredPenjualan.filter((t) => t.metode === "TUNAI").length;
+
+    return { total, qris, tunai, count: filteredPenjualan.length, qrisCount, tunaiCount };
   }, [filteredPenjualan]);
 
-  // ✅ AKSI HITUNG LIVE: Menghitung Kas Fisik Bersih di Laci (Uang Masuk Tunai - Biaya Operasional)
   const kasUangLaciBersih = useMemo(() => {
     const totalPengeluaran = shift?.pengeluaran?.reduce((sum, p) => sum + (p.total || 0), 0) || 0;
     return stats.tunai - totalPengeluaran;
@@ -175,16 +188,17 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
         <div className="stat-card blue">
           <div className="stat-header"><CreditCard size={22} /><div className="stat-title">Pembayaran QRIS</div></div>
           <div className="stat-amount">Rp {stats.qris.toLocaleString("id-ID")}</div>
-          <div className="stat-subtitle">E-Wallet Non-Tunai</div>
+          {/* ✅ SINKRONISASI: Menampilkan kuantitas transaksi asli tanpa teks deskripsi tambahan */}
+          <div className="stat-subtitle">{stats.qrisCount} transaksi</div>
         </div>
 
         <div className="stat-card orange">
           <div className="stat-header"><ShoppingBag size={22} /><div className="stat-title">Pembayaran Tunai</div></div>
           <div className="stat-amount">Rp {stats.tunai.toLocaleString("id-ID")}</div>
-          <div className="stat-subtitle">Uang Kas Masuk Kotor</div>
+          {/* ✅ SINKRONISASI: Menampilkan kuantitas transaksi asli tanpa teks deskripsi tambahan */}
+          <div className="stat-subtitle">{stats.tunaiCount} transaksi</div>
         </div>
 
-        {/* ✅ KARTU BARU: Kas Bersih Fisik Laci */}
         <div className="stat-card" style={{ background: kasUangLaciBersih >= 0 ? 'linear-gradient(135deg, #FFF0F5 0%, #FFE4E1 100%)' : '#F8D7DA', borderLeft: '5px solid #FF69B4' }}>
           <div className="stat-header"><Landmark size={22} style={{ color: '#C71585' }} /><div className="stat-title" style={{ color: '#C71585', fontWeight: '600' }}>Uang Tunai di Laci</div></div>
           <div className="stat-amount" style={{ color: '#8B0056' }}>Rp {kasUangLaciBersih.toLocaleString("id-ID")}</div>
@@ -195,13 +209,23 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
       <div className="table-container">
         <table className="data-table">
           <thead>
-            <tr><th>Waktu</th><th>Item</th><th>Metode</th><th>Total</th><th>Aksi</th></tr>
+            <tr>
+              <th>Waktu</th>
+              <th>Item</th>
+              <th>Metode</th>
+              <th>Total</th>
+              <th>Aksi</th>
+            </tr>
           </thead>
           <tbody>
             {filteredPenjualan.map((t) => (
               <tr key={t.id || t.waktu}>
                 <td>{new Date(t.waktu).toLocaleTimeString("id-ID")}</td>
-                <td>{t.items?.map((item, idx) => <div key={idx}>{item.nama || item.namaItem} ({item.qty}x)</div>)}</td>
+                <td>
+                  {t.items?.map((item, idx) => (
+                    <div key={idx}>{item.nama || item.namaItem} ({item.qty}x)</div>
+                  ))}
+                </td>
                 <td>{t.metode}</td>
                 <td>Rp {t.total.toLocaleString("id-ID")}</td>
                 <td>
@@ -217,7 +241,8 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
       {/* 📦 MODAL EDIT PENJUALAN */}
       {openEditModal && (
         <div className="modal-overlay" onClick={() => setOpenEditModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "450px" }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "450px" }}
+          >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 15 }}>
               <div className="modal-title" style={{ margin: 0 }}>Edit Transaksi Penjualan</div>
               <button onClick={() => setOpenEditModal(false)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={20} /></button>
@@ -238,7 +263,13 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
                   <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 10 }}>
                     <span style={{ fontSize: "14px", fontWeight: 500 }}>{item.nama || item.namaItem}</span>
                     <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                      <input type="number" min="0" style={{ width: "60px", padding: "4px", textAlign: "center" }} value={item.qty} onChange={(e) => handleQtyChange(item.id, e.target.value)} />
+                      <input
+                        type="number"
+                        min="0"
+                        style={{ width: "60px", padding: "4px", textAlign: "center" }}
+                        value={item.qty}
+                        onChange={(e) => handleQtyChange(item.id, e.target.value)}
+                      />
                       <span style={{ fontSize: "12px", color: "#666" }}>cup</span>
                     </div>
                   </div>
