@@ -78,6 +78,9 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
 
   const total = cart.reduce((sum, item) => sum + item.harga * item.qty, 0);
 
+  // ✅ Live perkiraan jumlah cup yang sedang dipesan di keranjang
+  const totalQtyInCart = cart.reduce((sum, item) => sum + item.qty, 0);
+
   const handleConfirmPayment = (metode) => {
     const totalCups = cart.reduce((sum, item) => sum + item.qty, 0);
     const currentCups = (shift?.stokDasar?.sisaCup || 0) + (shift?.stokDasar?.cupBesar || 0);
@@ -159,15 +162,26 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
                   );
                 })}
               </div>
+              
+              {/* ✅ LIVE BANNER: Menampilkan akumulasi ringkasan belanja jika ada item di keranjang */}
+              {totalQtyInCart > 0 && (
+                <div style={{ marginTop: '20px', padding: '12px', background: '#FFF0F5', borderRadius: '8px', borderLeft: '5px solid #FF69B4' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 'bold', color: '#C71585' }}>
+                    <span>Estimasi Cup Dipilih:</span>
+                    <span>{totalQtyInCart} Cup</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="cart-section">
             <div className="section-card">
               <h2 className="section-title">Pesanan</h2>
-              <div className="cup-stock-info" style={{ marginBottom: 10 }}>
-                <span>Susu Tersedia:</span>
-                <strong>{shift?.stokDasar?.susu || 0} sachet</strong>
+              {/* ✅ PERBAIKAN: Hanya menampilkan sisa stok cup saja */}
+              <div className="cup-stock-info" style={{ marginBottom: 15 }}>
+                <span>Cup Tersedia:</span>
+                <strong>{((shift?.stokDasar?.sisaCup || 0) + (shift?.stokDasar?.cupBesar || 0))} pcs</strong>
               </div>
               {cart.length === 0 ? (
                 <p className="cart-empty">Belum ada pesanan</p>
@@ -192,6 +206,10 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
                     ))}
                   </div>
                   <div className="cart-total">
+                    <div className="cart-total-row" style={{ marginBottom: '10px' }}>
+                      <span>Total Bayar:</span>
+                      <strong>Rp {total.toLocaleString('id-ID')}</strong>
+                    </div>
                     <button className="cart-checkout-btn" onClick={() => setShowPayment(true)}>Bayar</button>
                   </div>
                 </>

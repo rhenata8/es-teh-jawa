@@ -1,14 +1,18 @@
 // src/pages/Stok.js
 import React, { useMemo, useState } from 'react';
-import { Plus, Package, Coffee, Edit2, Trash2, Save } from 'lucide-react';
+import { Plus, Package, Coffee, Edit2, Trash2, Save, X } from 'lucide-react';
 
 function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
   const [openBuatTeh, setOpenBuatTeh] = useState(false);
   const [openTambahItem, setOpenTambahItem] = useState(false);
   const [openEditItem, setOpenEditItem] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  
+  // ✅ State Baru untuk Modal Tambah Stok Dasar
+  const [openTambahStokDasar, setOpenTambahStokDasar] = useState(false);
+  const [pilihBahan, setPilihBahan] = useState('sisaCup');
+  const [jumlahTambahBahan, setJumlahTambahBahan] = useState(0);
 
-  // ✅ Inisialisasi properti susu dengan nilai default agar tidak menghasilkan undefined/NaN
   const stokDasar = shift?.stokDasar || { sisaCup: 0, cupBesar: 0, gula: 0, teh: 0, esBatu: 0, susu: 0 };
   const pembuatanTeh = shift?.pembuatanTeh || [];
   const stokJenisTeh = shift?.stokJenisTeh || [];
@@ -19,7 +23,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
     gula: stokDasar.gula ?? 0,
     teh: stokDasar.teh ?? 0,
     esBatu: stokDasar.esBatu ?? 0,
-    susu: stokDasar.susu ?? 0 // ✅ Sinkronisasi variabel susu sachet lokal
+    susu: stokDasar.susu ?? 0 
   });
 
   const [buatTehJenis, setBuatTehJenis] = useState('');
@@ -53,6 +57,15 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
     return map;
   }, [shift?.transaksi]);
 
+  // ✅ AKSI LIVE: Menghitung akumulasi total seluruh cup produk yang terjual
+  const totalSemuaCupTerjual = useMemo(() => {
+    let total = 0;
+    soldCountByName.forEach((value) => {
+      total += value;
+    });
+    return total;
+  }, [soldCountByName]);
+
   const commitStokDasar = (next) => {
     const updatedShift = {
       ...shift,
@@ -62,7 +75,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
         gula: Math.max(0, Number(next.gula) || 0),
         teh: Math.max(0, Number(next.teh) || 0),
         esBatu: Math.max(0, Number(next.esBatu) || 0),
-        susu: Math.max(0, Number(next.susu) || 0) // ✅ Sinkronisasi global shift data
+        susu: Math.max(0, Number(next.susu) || 0)
       }
     };
     onUpdateShift(updatedShift);
@@ -72,6 +85,26 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
     const next = { ...localStokDasar, [key]: value };
     setLocalStokDasar(next);
     commitStokDasar(next);
+  };
+
+  // ✅ FUNGSI BARU: Eksekusi penambahan nilai stok dasar dari modal form
+  const handleSaveTambahStokDasar = () => {
+    const nilaiTambah = Number(jumlahTambahBahan) || 0;
+    if (nilaiTambah <= 0) {
+      alert("Masukkan jumlah pengisian stok yang valid!");
+      return;
+    }
+
+    const nilaiLama = Number(localStokDasar[pilihBahan]) || 0;
+    const nilaiBaru = nilaiLama + nilaiTambah;
+
+    const next = { ...localStokDasar, [pilihBahan]: nilaiBaru };
+    setLocalStokDasar(next);
+    commitStokDasar(next);
+    
+    setOpenTambahStokDasar(false);
+    setJumlahTambahBahan(0);
+    alert("Stok bahan baku berhasil ditambahkan!");
   };
 
   const resetBuatTeh = () => {
@@ -88,7 +121,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
     setItemSatuan('cup');
   };
 
-  // 🗑️ FUNGSI BARU: Menghapus data dari riwayat Pembuatan Teh
   const handleHapusPembuatanTeh = (id) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus riwayat pembuatan teh ini?")) {
       const updatedShift = {
@@ -99,7 +131,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
     }
   };
 
-  // 🗑️ FUNGSI BARU: Menghapus menu varian teh secara permanen dari daftar produk
   const handleHapusMenuTeh = (id) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus menu varian produk ini?")) {
       const updatedItems = stokJenisTeh.filter(item => item.id !== id);
@@ -108,7 +139,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
         stokJenisTeh: updatedItems
       };
       onUpdateShift(updatedShift);
-      // Sinkronkan ke local storage browser untuk pembaruan instan
       localStorage.setItem('tea-shop-global-menu', JSON.stringify(updatedItems));
     }
   };
@@ -171,12 +201,10 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
     };
 
     const updatedItems = [...stokJenisTeh, newItem];
-    const updatedShift = {
+    onUpdateShift({
       ...shift,
       stokJenisTeh: updatedItems
-    };
-
-    onUpdateShift(updatedShift);
+    });
     localStorage.setItem('tea-shop-global-menu', JSON.stringify(updatedItems));
     setOpenTambahItem(false);
     resetTambahItem();
@@ -205,12 +233,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
       return item;
     });
 
-    const updatedShift = {
-      ...shift,
-      stokJenisTeh: updatedItems
-    };
-
-    onUpdateShift(updatedShift);
+    onUpdateShift({ ...shift, stokJenisTeh: updatedItems });
     localStorage.setItem('tea-shop-global-menu', JSON.stringify(updatedItems));
     setOpenEditItem(false);
     setEditingItem(null);
@@ -222,9 +245,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
       if (it.id !== id) return it;
       return { ...it, stokAwal: Math.max(0, Number(value) || 0) };
     });
-
-    const updatedShift = { ...shift, stokJenisTeh: next };
-    onUpdateShift(updatedShift);
+    onUpdateShift({ ...shift, stokJenisTeh: next });
     localStorage.setItem('tea-shop-global-menu', JSON.stringify(next));
   };
 
@@ -260,9 +281,16 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
 
         <div className="stok-section">
           <div className="section-card">
-            <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Package size={20} />
-              Stok Dasar
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 10, margin: 0 }}>
+                <Package size={20} />
+                Stok Dasar
+              </div>
+              {/* ✅ TOMBOL BARU: Mengaktifkan modal pengisian stok dasar */}
+              <button className="add-button" onClick={() => setOpenTambahStokDasar(true)}>
+                <Plus size={18} />
+                Tambah Stok Bahan
+              </button>
             </div>
 
             <table className="stok-table">
@@ -354,7 +382,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                   <td>kg</td>
                   <td className="status-text success">stok es batu tersedia</td>
                 </tr>
-                {/* ✅ BARIS INPUT BARU: Susu Sachet (tidak akan hilang) */}
                 <tr>
                   <td>Susu Sachet</td>
                   <td>
@@ -402,7 +429,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                     <th>Gula</th>
                     <th>Teh</th>
                     <th>Es Batu</th>
-                    <th>Aksi</th> {/* ✅ Judul kolom aksi hapas */}
+                    <th>Aksi</th> 
                   </tr>
                 </thead>
                 <tbody>
@@ -414,9 +441,8 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                       <td>{Number(r.tehGram || 0)} gram</td>
                       <td>{Number(r.esBatuKg || 0)} kg</td>
                       <td>
-                        {/* ✅ Tombol Hapus Riwayat Pembuatan */}
-                        <button 
-                          onClick={() => handleHapusPembuatanTeh(r.id)} 
+                        <button
+                          onClick={() => handleHapusPembuatanTeh(r.id)}
                           style={{ background: 'none', border: 'none', color: '#DC3545', cursor: 'pointer' }}
                         >
                           <Trash2 size={16} />
@@ -492,16 +518,14 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                           </span>
                         </td>
                         <td>
-                          {/* ✅ Tombol Edit Menu */}
-                          <button 
+                          <button
                             className="edit-btn"
                             onClick={() => handleEditItem(it)}
                             style={{ marginRight: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#007BFF' }}
                           >
                             <Edit2 size={16} />
                           </button>
-                          {/* ✅ Tombol Hapus Varian Menu */}
-                          <button 
+                          <button
                             className="delete-btn"
                             onClick={() => handleHapusMenuTeh(it.id)}
                             style={{ background: 'none', border: 'none', color: '#DC3545', cursor: 'pointer' }}
@@ -512,18 +536,70 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                       </tr>
                     );
                   })}
+                  
+                  {/* ✅ BARIS BARU: Menampilkan akumulasi total cup terjual pada shift */}
+                  <tr style={{ background: '#FFF8F0', fontWeight: 'bold' }}>
+                    <td colSpan="3" style={{ textAlign: 'left', paddingLeft: '15px', color: '#C85A00' }}>
+                      🔥 Total Cup Terjual (Semua Menu Varian):
+                    </td>
+                    <td style={{ color: '#D2691E', fontSize: '16px' }}>{totalSemuaCupTerjual}</td>
+                    <td colSpan="2" style={{ color: '#666', fontStyle: 'italic', fontSize: '13px' }}>cup cup</td>
+                  </tr>
                 </tbody>
               </table>
             )}
           </div>
         </div>
 
+        {/* ✅ MODAL BARU: Tambah Kuantitas Stok Dasar */}
+        {openTambahStokDasar && (
+          <div className="modal-overlay" onClick={() => setOpenTambahStokDasar(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                <div className="modal-title" style={{ margin: 0 }}>Tambah Stok Bahan Baku</div>
+                <button onClick={() => setOpenTambahStokDasar(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Pilih Jenis Bahan</label>
+                <select className="form-input" value={pilihBahan} onChange={(e) => setPilihBahan(e.target.value)}>
+                  <option value="sisaCup">Sisa Cup (pcs)</option>
+                  <option value="cupBesar">Cup Besar (pcs)</option>
+                  <option value="gula">Gula (kg)</option>
+                  <option value="teh">Teh (gram)</option>
+                  <option value="esBatu">Es Batu (kg)</option>
+                  <option value="susu">Susu Sachet (sachet)</option>
+                </select>
+              </div>
+
+              <div className="form-group" style={{ marginTop: 15 }}>
+                <label className="form-label required">Jumlah yang Ditambahkan</label>
+                <input
+                  className="form-input"
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={jumlahTambahBahan}
+                  onChange={(e) => setJumlahTambahBahan(e.target.value)}
+                  placeholder="Masukkan angka kuantitas..."
+                />
+              </div>
+
+              <div className="modal-actions" style={{ marginTop: 25 }}>
+                <button className="btn btn-secondary" onClick={() => setOpenTambahStokDasar(false)}>Batal</button>
+                <button className="btn btn-primary" onClick={handleSaveTambahStokDasar}>
+                  <Save size={16} style={{ marginRight: 5 }} /> Simpan Kuantitas
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Modal Buat Teh */}
         {openBuatTeh && (
           <div className="modal-overlay" onClick={() => { setOpenBuatTeh(false); resetBuatTeh(); }}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-title">Buat Teh Baru</div>
-
               <div className="section-card" style={{ padding: 16, marginBottom: 20, background: '#EAF3FF' }}>
                 <div style={{ fontWeight: 700, color: '#6B3410', marginBottom: 8 }}>Stok Tersedia:</div>
                 <div style={{ display: 'flex', gap: 20, color: '#3B5AA6', flexWrap: 'wrap' }}>
@@ -532,7 +608,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                   <div>Es Batu: <span style={{ fontWeight: 800 }}>{Number(localStokDasar.esBatu || 0)} kg</span></div>
                 </div>
               </div>
-
               <div className="form-group">
                 <label className="form-label required">Jenis Teh</label>
                 <input
@@ -542,7 +617,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                   onChange={(e) => setBuatTehJenis(e.target.value)}
                 />
               </div>
-
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Gula (kg)</label>
@@ -571,7 +645,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                   <small className="form-hint">Kosongkan jika tidak menggunakan teh</small>
                 </div>
               </div>
-
               <div className="form-group">
                 <label className="form-label">Es Batu (kg)</label>
                 <input
@@ -585,7 +658,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                 />
                 <small className="form-hint">Kosongkan jika tidak menggunakan es batu</small>
               </div>
-
               <div className="modal-actions">
                 <button className="btn btn-secondary" onClick={() => { setOpenBuatTeh(false); resetBuatTeh(); }}>
                   Batal
@@ -607,7 +679,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
           <div className="modal-overlay" onClick={() => { setOpenTambahItem(false); resetTambahItem(); }}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-title">Tambah Menu Baru</div>
-
               <div className="form-group">
                 <label className="form-label required">Nama Menu</label>
                 <input
@@ -617,7 +688,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                   onChange={(e) => setItemNama(e.target.value)}
                 />
               </div>
-
               <div className="form-group">
                 <label className="form-label required">Harga</label>
                 <input
@@ -629,7 +699,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                   onChange={(e) => setItemHarga(e.target.value)}
                 />
               </div>
-
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label required">Stok Awal</label>
@@ -651,7 +720,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                   />
                 </div>
               </div>
-
               <div className="modal-actions">
                 <button className="btn btn-secondary" onClick={() => { setOpenTambahItem(false); resetTambahItem(); }}>
                   Batal
@@ -673,7 +741,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
           <div className="modal-overlay" onClick={() => { setOpenEditItem(false); setEditingItem(null); resetTambahItem(); }}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-title">Edit Menu</div>
-
               <div className="form-group">
                 <label className="form-label required">Nama Menu</label>
                 <input
@@ -683,7 +750,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                   onChange={(e) => setItemNama(e.target.value)}
                 />
               </div>
-
               <div className="form-group">
                 <label className="form-label required">Harga</label>
                 <input
@@ -695,7 +761,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                   onChange={(e) => setItemHarga(e.target.value)}
                 />
               </div>
-
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label required">Stok Awal</label>
@@ -717,7 +782,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                   />
                 </div>
               </div>
-
               <div className="modal-actions">
                 <button className="btn btn-secondary" onClick={() => { setOpenEditItem(false); setEditingItem(null); resetTambahItem(); }}>
                   Batal
@@ -734,7 +798,6 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
