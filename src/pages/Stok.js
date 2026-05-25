@@ -299,7 +299,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                   <th>Item</th>
                   <th>Jumlah</th>
                   <th>Satuan</th>
-                  <th>Keterangan</th>
+                  {/* <th>Keterangan</th> */}
                 </tr>
               </thead>
               <tbody>
@@ -315,7 +315,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                     />
                   </td>
                   <td>pcs</td>
-                  <td className="status-text warning">dari shift sebelumnya</td>
+                  {/* <td className="status-text warning">dari shift sebelumnya</td> */}
                 </tr>
                 <tr>
                   <td>Cup Besar</td>
@@ -329,13 +329,13 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                     />
                   </td>
                   <td>pcs</td>
-                  <td className="status-text warning">stok baru</td>
+                  {/* <td className="status-text warning">stok baru</td> */}
                 </tr>
                 <tr>
                   <td style={{ fontWeight: 700 }}>Total Cup</td>
                   <td style={{ fontWeight: 700 }}>{totalCup}</td>
                   <td style={{ fontWeight: 700 }}>pcs</td>
-                  <td className="status-text success">otomatis berkurang saat transaksi</td>
+                  {/* <td className="status-text success">otomatis berkurang saat transaksi</td> */}
                 </tr>
                 <tr>
                   <td>Gula</td>
@@ -350,7 +350,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                     />
                   </td>
                   <td>kg</td>
-                  <td className="status-text success">stok gula tersedia</td>
+                  {/* <td className="status-text success">stok gula tersedia</td> */}
                 </tr>
                 <tr>
                   <td>Teh</td>
@@ -365,7 +365,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                     />
                   </td>
                   <td>gram</td>
-                  <td className="status-text success">stok teh tersedia</td>
+                  {/* <td className="status-text success">stok teh tersedia</td> */}
                 </tr>
                 <tr>
                   <td>Es Batu</td>
@@ -380,7 +380,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                     />
                   </td>
                   <td>kg</td>
-                  <td className="status-text success">stok es batu tersedia</td>
+                  {/* <td className="status-text success">stok es batu tersedia</td> */}
                 </tr>
                 <tr>
                   <td>Susu Sachet</td>
@@ -395,7 +395,7 @@ function Stok({ shift, onUpdateShift, onBack, onNavigate, onEndShift }) {
                     />
                   </td>
                   <td>sachet</td>
-                  <td className="status-text success">digunakan otomatis oleh Milk, Matcha & Thai Tea</td>
+                  {/* <td className="status-text success">digunakan otomatis oleh Milk, Matcha & Thai Tea</td> */}
                 </tr>
               </tbody>
             </table>
