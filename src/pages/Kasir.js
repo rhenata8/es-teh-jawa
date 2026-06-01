@@ -6,8 +6,6 @@ import "../App.css";
 export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
   const [cart, setCart] = useState([]);
   const [showPayment, setShowPayment] = useState(false);
-  
-  // ✅ State Baru untuk Fitur Pembayaran & Kembalian
   const [uangDiterimaInput, setUangDiterimaInput] = useState("");
 
   const menu = shift?.stokJenisTeh || [];
@@ -84,7 +82,6 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
   const total = cart.reduce((sum, item) => sum + item.harga * item.qty, 0);
   const totalQtyInCart = cart.reduce((sum, item) => sum + item.qty, 0);
 
-  // ✅ LOGIKA OTOMATIS TAMBAH "000": Mengonversi input ringkas (cth: 50 -> 50000)
   const nominalUangDiterima = useMemo(() => {
     const nilaiMentah = parseInt(uangDiterimaInput) || 0;
     if (nilaiMentah > 0 && nilaiMentah < 1000) {
@@ -93,7 +90,6 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
     return nilaiMentah;
   }, [uangDiterimaInput]);
 
-  // ✅ Hitung nilai sisa kembalian uang secara live
   const kembalian = useMemo(() => {
     if (nominalUangDiterima <= 0) return 0;
     return nominalUangDiterima - total;
@@ -108,9 +104,8 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
       return;
     }
 
-    // Validasi nominal pembayaran jika menggunakan metode Tunai
     if (metode === "TUNAI" && nominalUangDiterima < total) {
-      alert(`Uang yang diterima (Rp ${nominalUangDiterima.toLocaleString('id-ID')}) kurang dari total tagihan!`);
+      alert(`Uang yang diterima kurang dari total tagihan!`);
       return;
     }
 
@@ -124,13 +119,13 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
 
     const stokSusuSekarang = shift?.stokDasar?.susu || 0;
     if (totalSusuDibutuhkan > stokSusuSekarang) {
-      alert(`Stok Susu tidak cukup! Dibutuhkan ${totalSusuDibutuhkan} sachet, sisa stok: ${stokSusuSekarang} sachet`);
+      alert(`Stok Susu tidak cukup! Dibutuhkan ${totalSusuDibutuhkan} sachet.`);
       return;
     }
 
     const newTransaction = {
       id: Date.now(),
-      metode,
+      metode, // Bisa berisi "TUNAI", "QRIS", atau "GRAB"
       total,
       items: cart,
       waktu: new Date().toISOString(),
@@ -155,7 +150,7 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
     setCart([]);
     setUangDiterimaInput("");
     setShowPayment(false);
-    alert(`Pembayaran sukses! Kembalian: Rp ${newTransaction.kembalian.toLocaleString('id-ID')}`);
+    alert(metode === "TUNAI" ? `Pembayaran sukses! Kembalian: Rp ${kembalian.toLocaleString('id-ID')}` : "Pembayaran Non-Tunai Berhasil Dicatat!");
   };
 
   return (
@@ -169,7 +164,7 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
         <div className="kasir-container">
           <div className="menu-section">
             <div className="section-card">
-              <h2 className="section-title">Menu Teh</h2>
+              <h2 className="section-title">Menu {shift?.shift}</h2>
               <div className="menu-grid">
                 {menu.map((item) => {
                   const availableStok = getAvailableStok(item);
@@ -232,11 +227,10 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
                     ))}
                   </div>
 
-                  {/* ✅ INTERFACE BARU: Input Nominal Bayar & Template Shortcut Uang */}
                   <div className="payment-calculation-zone" style={{ marginTop: "15px", paddingTop: "15px", borderTop: "2px dashed #EEE" }}>
                     <div className="form-group" style={{ marginBottom: "10px" }}>
                       <label className="form-label" style={{ fontWeight: "bold", fontSize: "13px", color: "#666" }}>
-                        Uang Diterima (Ketik "50" untuk 50.000)
+                        Uang Diterima (Khusus Tunai)
                       </label>
                       <input
                         type="number"
@@ -248,7 +242,6 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
                       />
                     </div>
 
-                    {/* ✅ TOMBOL CEPAT TEMPLATE PECAHAN RUPIAH */}
                     <div className="money-templates-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "6px", marginBottom: "12px" }}>
                       <button type="button" onClick={() => setUangDiterimaInput(total.toString())} style={{ padding: "6px 2px", fontSize: "11px", fontWeight: "bold", background: "#E6F4EA", border: "1px solid #A3CFBB", borderRadius: "4px", cursor: "pointer" }}>Uang Pas</button>
                       <button type="button" onClick={() => setUangDiterimaInput("10")} style={{ padding: "6px 2px", fontSize: "11px", background: "#F1F3F4", border: "1px solid #DADCE0", borderRadius: "4px", cursor: "pointer" }}>10k</button>
@@ -257,7 +250,6 @@ export default function Kasir({ addPenjualan, shift, onUpdateShift }) {
                       <button type="button" onClick={() => setUangDiterimaInput("100")} style={{ padding: "6px 2px", fontSize: "11px", background: "#F1F3F4", border: "1px solid #DADCE0", borderRadius: "4px", cursor: "pointer" }}>100k</button>
                     </div>
 
-                    {/* Konfirmasi Pembacaan Format Real Nominal & Kembalian */}
                     {nominalUangDiterima > 0 && (
                       <div style={{ padding: "10px", background: "#F8F9FA", borderRadius: "6px", fontSize: "13px", marginBottom: "15px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>

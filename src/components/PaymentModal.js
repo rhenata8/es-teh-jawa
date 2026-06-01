@@ -1,6 +1,6 @@
 // src/components/PaymentModal.jsx
 import React from "react";
-import { CreditCard, Banknote, X } from "lucide-react";
+import { CreditCard, Banknote, X, Smartphone } from "lucide-react";
 import "../App.css";
 
 export default function PaymentModal({ total, onConfirm, onClose }) {
@@ -14,7 +14,22 @@ export default function PaymentModal({ total, onConfirm, onClose }) {
         <h3 className="payment-modal-title">Pilih Metode Pembayaran</h3>
         <p className="payment-modal-total">Rp {total.toLocaleString('id-ID')}</p>
 
-        <div className="payment-methods-grid">
+        <div className="payment-methods-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+          {/* Opsi Tunai */}
+          <button
+            className="payment-method-card cash"
+            onClick={() => onConfirm("TUNAI")}
+          >
+            <div className="payment-icon-wrapper">
+              <Banknote size={32} />
+            </div>
+            <div className="payment-method-info">
+              <div className="payment-method-name">Tunai</div>
+              <div className="payment-method-desc">Bayar Cash</div>
+            </div>
+          </button>
+
+          {/* Opsi QRIS */}
           <button
             className="payment-method-card qris"
             onClick={() => onConfirm("QRIS")}
@@ -28,16 +43,18 @@ export default function PaymentModal({ total, onConfirm, onClose }) {
             </div>
           </button>
 
+          {/* ✅ OPSI BARU: Grab */}
           <button
-            className="payment-method-card cash"
-            onClick={() => onConfirm("TUNAI")}
+            className="payment-method-card grab"
+            onClick={() => onConfirm("GRAB")}
+            style={{ borderColor: "#00B14F" }}
           >
-            <div className="payment-icon-wrapper">
-              <Banknote size={32} />
+            <div className="payment-icon-wrapper" style={{ color: "#00B14F" }}>
+              <Smartphone size={32} />
             </div>
             <div className="payment-method-info">
-              <div className="payment-method-name">Tunai</div>
-              <div className="payment-method-desc">Bayar Cash</div>
+              <div className="payment-method-name" style={{ color: "#00B14F", fontWeight: "bold" }}>Grab</div>
+              <div className="payment-method-desc">Pesanan Online</div>
             </div>
           </button>
         </div>

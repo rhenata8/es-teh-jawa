@@ -6,7 +6,6 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
   const [filterMetode, setFilterMetode] = useState("SEMUA");
   const [filterJenisTeh, setFilterJenisTeh] = useState("SEMUA");
 
-  // State untuk modal edit
   const [openEditModal, setOpenEditModal] = useState(false);
   const [editingTransaksi, setEditingTransaksi] = useState(null);
   const [editMetode, setEditMetode] = useState("TUNAI");
@@ -34,7 +33,6 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
     });
   }, [penjualan, filterMetode, filterJenisTeh]);
 
-  // 🗑️ FUNGSI HAPUS TRANSAKSI (Dengan pengembalian susu)
   const handleHapusTransaksi = (transaksiId) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus/membatalkan penjualan ini?")) {
       const transaksiTarget = shift.transaksi.find((t) => t.id === transaksiId);
@@ -65,7 +63,6 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
     }
   };
 
-  // 📝 FUNGSI MEMBUKA MODAL EDIT
   const handleOpenEdit = (transaksi) => {
     setEditingTransaksi(transaksi);
     setEditMetode(transaksi.metode);
@@ -73,13 +70,11 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
     setOpenEditModal(true);
   };
 
-  // Mengubah qty item di dalam form modal edit
   const handleQtyChange = (itemId, newQty) => {
     const validQty = Math.max(0, parseInt(newQty) || 0);
     setEditItems(editItems.map((item) => item.id === itemId ? { ...item, qty: validQty } : item));
   };
 
-  // 💾 FUNGSI MENYIMPAN HASIL EDIT TRANSAKSI
   const handleSaveEdit = () => {
     const cupsAwal = editingTransaksi.items.reduce((sum, item) => sum + item.qty, 0);
     let susuAwal = 0;
@@ -107,7 +102,7 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
     const stokSusuTersedia = shift.stokDasar.susu || 0;
 
     if (selisihCup > stokCupTersedia) {
-      alert(`Stok cup tidak mencukupi untuk perubahan ini! Dibutuhkan tambahan ${selisihCup} cup.`);
+      alert(`Stok cup tidak mencukupi! Dibutuhkan tambahan ${selisihCup} cup.`);
       return;
     }
     if (selisihSusu > stokSusuTersedia) {
@@ -122,7 +117,6 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
       return t;
     });
 
-    // ✅ PERBAIKAN LOGIKA: Perhitungan variabel dikembalikan langsung tanpa callback arrow function
     const updatedShift = {
       ...shift,
       stokDasar: {
@@ -139,16 +133,21 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
     alert("Data transaksi penjualan berhasil diperbarui!");
   };
 
+  // ✅ KARTU AKTIF: Mengkalkulasi pendapatan gabungan QRIS + GRAB ke dalam satu tempat
   const stats = useMemo(() => {
     const total = filteredPenjualan.reduce((sum, t) => sum + t.total, 0);
-    const qris = filteredPenjualan.filter((t) => t.metode === "QRIS").reduce((sum, t) => sum + t.total, 0);
     const tunai = filteredPenjualan.filter((t) => t.metode === "TUNAI").reduce((sum, t) => sum + t.total, 0);
     
-    // Hitung jumlah baris transaksi per masing-masing metode secara spesifik
-    const qrisCount = filteredPenjualan.filter((t) => t.metode === "QRIS").length;
-    const tunaiCount = filteredPenjualan.filter((t) => t.metode === "TUNAI").length;
+    // Hitung nominal QRIS, GRAB secara terpisah, lalu gabungkan ke satu variabel stats
+    const qrisNominal = filteredPenjualan.filter((t) => t.metode === "QRIS").reduce((sum, t) => sum + t.total, 0);
+    const grabNominal = filteredPenjualan.filter((t) => t.metode === "GRAB").reduce((sum, t) => sum + t.total, 0);
+    const qrisDanGrab = qrisNominal + grabNominal;
 
-    return { total, qris, tunai, count: filteredPenjualan.length, qrisCount, tunaiCount };
+    const tunaiCount = filteredPenjualan.filter((t) => t.metode === "TUNAI").length;
+    const qrisCount = filteredPenjualan.filter((t) => t.metode === "QRIS").length;
+    const grabCount = filteredPenjualan.filter((t) => t.metode === "GRAB").length;
+
+    return { total, qrisDanGrab, tunai, count: filteredPenjualan.length, qrisCount, grabCount, tunaiCount };
   }, [filteredPenjualan]);
 
   const kasUangLaciBersih = useMemo(() => {
@@ -168,8 +167,9 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
       <div className="filter-section" style={{ marginBottom: 20, display: "flex", gap: 15 }}>
         <select className="filter-select" value={filterMetode} onChange={(e) => setFilterMetode(e.target.value)}>
           <option value="SEMUA">Semua Metode</option>
-          <option value="QRIS">QRIS</option>
           <option value="TUNAI">Tunai</option>
+          <option value="QRIS">QRIS</option>
+          <option value="GRAB">Grab</option> {/* ✅ Filter Opsi Baru */}
         </select>
         <select className="filter-select" value={filterJenisTeh} onChange={(e) => setFilterJenisTeh(e.target.value)}>
           <option value="SEMUA">Semua Varian</option>
@@ -177,7 +177,7 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
         </select>
       </div>
 
-      {/* ✅ GRID KARTU KEUANGAN LENGKAP */}
+      {/* GRID KARTU KEUANGAN LENGKAP */}
       <div className="stats-grid" style={{ marginBottom: 20, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px' }}>
         <div className="stat-card green">
           <div className="stat-header"><DollarSign size={22} /><div className="stat-title">Total Penjualan</div></div>
@@ -185,23 +185,22 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
           <div className="stat-subtitle">{stats.count} transaksi</div>
         </div>
 
+        {/* ✅ PEMBARUAN KARTU: Menggabungkan total QRIS & GRAB */}
         <div className="stat-card blue">
-          <div className="stat-header"><CreditCard size={22} /><div className="stat-title">Pembayaran QRIS</div></div>
-          <div className="stat-amount">Rp {stats.qris.toLocaleString("id-ID")}</div>
-          {/* ✅ SINKRONISASI: Menampilkan kuantitas transaksi asli tanpa teks deskripsi tambahan */}
-          <div className="stat-subtitle">{stats.qrisCount} transaksi</div>
+          <div className="stat-header"><CreditCard size={22} /><div className="stat-title">QRIS & Grab</div></div>
+          <div className="stat-amount">Rp {stats.qrisDanGrab.toLocaleString("id-ID")}</div>
+          <div className="stat-subtitle">{stats.qrisCount} QRIS | {stats.grabCount} Grab</div>
         </div>
 
         <div className="stat-card orange">
           <div className="stat-header"><ShoppingBag size={22} /><div className="stat-title">Pembayaran Tunai</div></div>
           <div className="stat-amount">Rp {stats.tunai.toLocaleString("id-ID")}</div>
-          {/* ✅ SINKRONISASI: Menampilkan kuantitas transaksi asli tanpa teks deskripsi tambahan */}
           <div className="stat-subtitle">{stats.tunaiCount} transaksi</div>
         </div>
 
         <div className="stat-card" style={{ background: kasUangLaciBersih >= 0 ? 'linear-gradient(135deg, #FFF0F5 0%, #FFE4E1 100%)' : '#F8D7DA', borderLeft: '5px solid #FF69B4' }}>
           <div className="stat-header"><Landmark size={22} style={{ color: '#C71585' }} /><div className="stat-title" style={{ color: '#C71585', fontWeight: '600' }}>Uang Tunai di Laci</div></div>
-          <div className="stat-amount" style={{ color: '#8B0056' }}>Rp {kasUangLaciBersih.toLocaleString("id-ID")}</div>
+          <div className="stat-amount">Rp {kasUangLaciBersih.toLocaleString("id-ID")}</div>
           <div className="stat-subtitle" style={{ color: '#666' }}>Sudah potong pengeluaran</div>
         </div>
       </div>
@@ -226,7 +225,12 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
                     <div key={idx}>{item.nama || item.namaItem} ({item.qty}x)</div>
                   ))}
                 </td>
-                <td>{t.metode}</td>
+                <td>
+                  {/* Badge warna dinamis untuk metode Grab */}
+                  <span className={`payment-badge`} style={t.metode === "GRAB" ? { color: "#00B14F", fontWeight: "bold" } : {}}>
+                    {t.metode}
+                  </span>
+                </td>
                 <td>Rp {t.total.toLocaleString("id-ID")}</td>
                 <td>
                   <button onClick={() => handleOpenEdit(t)} style={{ background: "none", border: "none", color: "#007BFF", cursor: "pointer", marginRight: 12 }}><Edit2 size={16} /></button>
@@ -241,8 +245,7 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
       {/* 📦 MODAL EDIT PENJUALAN */}
       {openEditModal && (
         <div className="modal-overlay" onClick={() => setOpenEditModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "450px" }}
-          >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "450px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 15 }}>
               <div className="modal-title" style={{ margin: 0 }}>Edit Transaksi Penjualan</div>
               <button onClick={() => setOpenEditModal(false)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={20} /></button>
@@ -253,6 +256,7 @@ export default function Penjualan({ penjualan, shift, onUpdateShift }) {
               <select className="form-input" value={editMetode} onChange={(e) => setEditMetode(e.target.value)}>
                 <option value="TUNAI">Tunai</option>
                 <option value="QRIS">QRIS</option>
+                <option value="GRAB">Grab</option>
               </select>
             </div>
 
